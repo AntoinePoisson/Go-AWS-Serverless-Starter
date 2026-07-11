@@ -1,0 +1,48 @@
+package middleware_test
+
+import (
+	"bytes"
+	"encoding/json"
+	"log/slog"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/antoinepoisson/bootstrap-go-aws/internal/httpx/middleware"
+)
+
+func captureLog(t *testing.T, status int) map[string]any {
+	t.Helper()
+
+	var buf bytes.Buffer
+	previous := slog.Default()
+	slog.SetDefault(slog.New(slog.NewJSONHandler(&buf, &slog.HandlerOptions{Level: slog.LevelDebug})))
+	t.Cleanup(func() { slog.SetDefault(previous) })
+
+	handler := middleware.Logger(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(status)
+	}))
+	handler.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/items", nil))
+
+	var entry map[string]any
+	require.NoError(t, json.Unmarshal(buf.Bytes(), &entry))
+	return entry
+}
+
+func TestLoggerRecordsTheRequest(t *testing.T) {
+	entry := captureLog(t, http.StatusOK)
+
+	assert.Equal(t, "request", entry["msg"])
+	assert.Equal(t, "INFO", entry["level"])
+	assert.Equal(t, http.MethodGet, entry["method"])
+	assert.Equal(t, "/items", entry["path"])
+	assert.EqualValues(t, http.StatusOK, entry["status"])
+}
+
+func TestLoggerRaisesTheLevelOnServerErrors(t *testing.T) {
+	assert.Equal(t, "ERROR", captureLog(t, http.StatusInternalServerError)["level"])
+	assert.Equal(t, "INFO", captureLog(t, http.StatusNotFound)["level"])
+}
