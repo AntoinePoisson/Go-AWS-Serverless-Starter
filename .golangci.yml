@@ -5,17 +5,34 @@ version: "2"
 linters:
   default: standard # errcheck, govet, ineffassign, staticcheck, unused
 
+  # godox is missing on purpose: CI and the hooks turn it on for the protected
+  # branches, where an unfinished thought matters.
   enable:
-    - errorlint
+    - bodyclose
+    - copyloopvar
+    - errorlint # errors.Is/As over ==, which internal/item/errors.go relies on
+    - gosec
     - misspell
+    - nilerr
+    - noctx
     - revive
+    - sloglint
+    - testifylint
     - unconvert
+    - usetesting
+    - wastedassign
 
   settings:
     errcheck:
       check-type-assertions: true
 
+    gosec:
+      excludes:
+        - G404 # math/rand is not used for anything security-bearing here
+
     revive:
+      # `exported` keeps its defaults: checkPrivateReceivers would want a doc
+      # comment on every ResponseWriter method of an unexported type.
       rules:
         - name: exported
         - name: context-as-argument
@@ -23,14 +40,41 @@ linters:
         - name: error-return
         - name: errorf
         - name: indent-error-flow
+        - name: range-val-in-closure
+        - name: unexported-return
         - name: unreachable-code
         - name: var-declaration
+
+    sloglint:
+      no-mixed-args: true
+      kv-only: true # slog.Info("msg", "key", value), never attribute helpers
+      static-msg: true # the message is the event, the value goes in a key
+      key-naming-case: snake # reads best in a CloudWatch Logs Insights query
+
+    testifylint:
+      disable:
+        # The recover test asserts on a truncated body, which JSONEq cannot
+        # parse.
+        - encoded-compare
+
+    staticcheck:
+      checks:
+        - all
+        - -ST1000 # a package comment on every package is a library convention
 
   exclusions:
     generated: lax
     presets:
       - common-false-positives
       - std-error-handling
+
+    rules:
+      - path: _test\.go
+        linters:
+          - bodyclose
+          - errcheck
+          - gosec
+          - noctx
 
 formatters:
   enable:
