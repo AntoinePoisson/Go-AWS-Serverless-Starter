@@ -1,0 +1,35 @@
+version: "3"
+
+vars:
+  GOARCH: arm64
+  LDFLAGS: -s -w
+  FUNCTIONS:
+    sh: ls -d lambda/*/ | xargs -n1 basename
+
+tasks:
+  host:
+    desc: Build every function for the host platform into bin/host
+    cmds:
+      - |
+        set -e
+        mkdir -p bin/host
+        for dir in lambda/*/; do
+          name=$(basename "$dir")
+          go build -o "bin/host/$name" "./lambda/$name"
+        done
+
+  dist:
+    desc: Build and package every function for Lambda into bin/dist
+    cmds:
+      - for: { var: FUNCTIONS }
+        task: one
+        vars: { NAME: "{{ .ITEM }}" }
+
+  one:
+    desc: Build and package a single function (NAME=api)
+    requires:
+      vars: [NAME]
+    cmds:
+      - mkdir -p bin/dist/{{ .NAME }}
+      - CGO_ENABLED=0 GOOS=linux GOARCH={{ .GOARCH }} go build -trimpath -ldflags "{{ .LDFLAGS }}" -o bin/dist/{{ .NAME }}/bootstrap ./lambda/{{ .NAME }}
+      - cd bin/dist/{{ .NAME }} && zip -q -X ../{{ .NAME }}.zip bootstrap

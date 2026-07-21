@@ -1,5 +1,10 @@
 version: "3"
 
+includes:
+  build: ./tasks/build.yml
+  clean: ./tasks/clean.yml
+  wire: ./tasks/wire.yml
+
 tasks:
   default:
     cmds:
@@ -25,9 +30,11 @@ tasks:
 
   test:
     desc: Run the unit tests with coverage
+    # -coverpkg to match what CI measures: most of the handler code is covered
+    # from another package's tests.
     cmds:
       - mkdir -p .coverage
-      - go test -race -coverprofile=.coverage/report.out ./...
+      - go test -race -coverpkg=./... -coverprofile=.coverage/report.out ./...
 
   coverage:
     desc: Open the coverage report in a browser
