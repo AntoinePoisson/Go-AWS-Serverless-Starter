@@ -1,0 +1,10 @@
+{
+  "name": "bootstrap-go-aws",
+  "version": "0.1.0",
+  "description": "AWS Lambda + API Gateway + DynamoDB starter written in Go",
+  "private": true,
+  "devDependencies": {
+    "serverless": "^3.40.0",
+    "serverless-iam-roles-per-function": "^3.2.0"
+  }
+}
