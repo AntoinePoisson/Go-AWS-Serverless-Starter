@@ -1,0 +1,34 @@
+# --no-install everywhere: bare `npx serverless` on a clone with no node_modules
+# downloads a v4 and deploys with it, whatever frameworkVersion pins.
+version: "3"
+
+vars:
+  STAGE: '{{ .STAGE | default "alpha" }}'
+
+tasks:
+  package:
+    desc: Build the CloudFormation template without deploying (STAGE=alpha)
+    deps: [build:dist]
+    cmds:
+      - npx --no-install serverless package --stage {{ .STAGE }}
+
+  stack:
+    desc: Deploy the whole stack (STAGE=alpha)
+    deps: [build:dist]
+    cmds:
+      - npx --no-install serverless deploy --stage {{ .STAGE }}
+
+  function:
+    desc: Deploy a single function (NAME=api STAGE=alpha)
+    requires:
+      vars: [NAME]
+    cmds:
+      - task: build:one
+        vars: { NAME: "{{ .NAME }}" }
+      - npx --no-install serverless deploy function --function {{ .NAME }} --stage {{ .STAGE }}
+
+  remove:
+    desc: Delete the deployed stack (STAGE=alpha)
+    prompt: Delete the {{ .STAGE }} stack?
+    cmds:
+      - npx --no-install serverless remove --stage {{ .STAGE }}
