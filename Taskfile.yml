@@ -5,6 +5,7 @@ includes:
   clean: ./tasks/clean.yml
   deploy: ./tasks/deploy.yml
   docs: ./tasks/docs.yml
+  local: ./tasks/local.yml
   wire: ./tasks/wire.yml
 
 tasks:
@@ -37,6 +38,13 @@ tasks:
     cmds:
       - mkdir -p .coverage
       - go test -race -coverpkg=./... -coverprofile=.coverage/report.out ./...
+
+  test:integration:
+    desc: Run the integration tests against DynamoDB Local
+    dotenv: [".env", ".env.example"]
+    deps: [local:db]
+    cmds:
+      - go test -tags=integration -count=1 ./internal/item/...
 
   coverage:
     desc: Open the coverage report in a browser
