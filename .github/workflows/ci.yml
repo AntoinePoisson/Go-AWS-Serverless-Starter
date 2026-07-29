@@ -5,14 +5,24 @@ on:
     # One branch per stage: dev -> alpha, main -> preprod, prod -> prod.
     branches: [dev, main, prod]
   pull_request:
+  workflow_dispatch:
+    inputs:
+      stage:
+        description: Stage to deploy once every check passes
+        type: choice
+        options: [alpha, preprod, prod]
+        default: alpha
 
-# Read-only by default (least privilege).
+# Read-only by default (least privilege). Only the deploy job widens this, and
+# only for OIDC.
 permissions:
   contents: read
 
+# A manual run is never disposable: it may deploy, and cancelling one
+# mid-`serverless deploy` leaves the stack in UPDATE_IN_PROGRESS.
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name != 'workflow_dispatch' }}
 
 jobs:
   # ============================================================
@@ -333,3 +343,127 @@ jobs:
           done
         env:
           DEPLOY_API_KEY: rendered-in-ci
+
+  # ============================================================
+  # RESOLVE - Which stage, and which version to report
+  # ============================================================
+  resolve:
+    name: Resolve Target
+    # Skipping this job skips deploy with it, which is how a pull request and a
+    # push to an unrelated branch stop short of AWS.
+    if: >-
+      github.event_name == 'workflow_dispatch'
+      || (github.event_name == 'push'
+          && contains(fromJSON('["dev","main","prod"]'), github.ref_name))
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      stage: ${{ steps.target.outputs.stage }}
+      version: ${{ steps.target.outputs.version }}
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+
+      # A job rather than an inline `${{ }}` on the deploy job, because an
+      # expression has no `exit 1`: an unknown ref must fail, not default to a
+      # stage nobody chose.
+      - name: Resolve the stage and the version
+        id: target
+        run: |
+          set -euo pipefail
+
+          if [ -n "${{ inputs.stage }}" ]; then
+            stage="${{ inputs.stage }}"
+          else
+            case "${{ github.ref_name }}" in
+            dev)  stage=alpha   ;;
+            main) stage=preprod ;;
+            prod) stage=prod    ;;
+            *) echo "::error::no stage is mapped to ref ${{ github.ref_name }}"; exit 1 ;;
+            esac
+          fi
+
+          # The version GET /health reports.
+          #
+          # "Deploy first, release after" means the tag for this commit does not
+          # exist yet, so `git describe` could only ever report the PREVIOUS tag
+          # plus a distance. The Release Please manifest does better: on the
+          # commit that merges a release pull request it already holds the new
+          # version, so the deployed value and the tag created seconds later
+          # agree exactly. On any other commit it reads "the last release, plus
+          # this commit", which is precise rather than approximate.
+          #
+          # alpha and preprod share the preprod manifest: dev is upstream of main.
+          manifest=.release-please-manifest-preprod.json
+          [ "$stage" = prod ] && manifest=.release-please-manifest-prod.json
+
+          if [ -f "$manifest" ]; then
+            base=$(jq -r '.["."]' "$manifest")
+          else
+            # Release Please has not been set up (or was removed downstream).
+            base=0.0.0
+            echo "::warning::$manifest is missing, reporting $base as the base version"
+          fi
+
+          # `+build` is SemVer build metadata: valid, ignored by precedence
+          # ordering, and accepted as-is in a Lambda environment variable.
+          version="${base}+${GITHUB_SHA::7}"
+
+          echo "stage=$stage"     >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Deploying **$stage** as \`$version\`" >> "$GITHUB_STEP_SUMMARY"
+
+  # ============================================================
+  # DEPLOY - Ships the artifacts the checks ran against
+  # ============================================================
+  deploy:
+    name: Deploy ${{ needs.resolve.outputs.stage }}
+    # No `always()` anywhere in this job, unlike the template this pipeline is
+    # modelled on. It downloads `lambda-artifacts`, so always() would only ever
+    # unblock the "build green, tests red" case - exactly the one to forbid. A
+    # failed serverless deploy can leave the stack in UPDATE_ROLLBACK_FAILED,
+    # preprod retains its table and rehearses prod, and a green deploy on main
+    # triggers a release: none of that survives shipping known-broken code.
+    #
+    # If dev ever feels too slow, shorten its barrier - do not remove it.
+    needs: [resolve, lint, test-unit, test-integration, openapi, build, test-e2e, infra]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: ${{ needs.resolve.outputs.stage }}
+    permissions:
+      contents: read
+      id-token: write
+    concurrency:
+      group: deploy-${{ needs.resolve.outputs.stage }}
+      cancel-in-progress: false
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install the Serverless Framework
+        run: npm ci
+
+      # The very zips the checks ran against, never a fresh build.
+      - name: Download the Lambda artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: lambda-artifacts
+          path: bin/dist
+
+      - name: Assume the deployment role through OIDC
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Deploy the stack
+        run: npx --no-install serverless deploy --stage "$STAGE"
+        env:
+          STAGE: ${{ needs.resolve.outputs.stage }}
+          VERSION: ${{ needs.resolve.outputs.version }}
