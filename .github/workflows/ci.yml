@@ -467,3 +467,73 @@ jobs:
         env:
           STAGE: ${{ needs.resolve.outputs.stage }}
           VERSION: ${{ needs.resolve.outputs.version }}
+
+  # ============================================================
+  # RELEASE - Deploy first, release after: a tag never points at code
+  # that was never deployed
+  # ============================================================
+  #
+  # Two configurations rather than one, and this is the point: both branches
+  # write a changelog, and if they wrote the SAME file they would both insert at
+  # the top of it, guaranteeing a merge conflict on every single release. main
+  # writes CHANGELOG-preprod.md, prod writes CHANGELOG.md, and the manifests are
+  # likewise per-branch, so nothing the two lines produce ever collides.
+  #
+  # Do NOT enable auto-merge on the release pull requests: a push authenticated
+  # with GITHUB_TOKEN triggers no workflow, so the tagged version would never be
+  # deployed. A human merging is what starts the pipeline that ships it.
+  release-preprod:
+    name: Release Preprod
+    # `needs.deploy.result` is belt and braces - an `if:` with no status
+    # function already implies success() over every need - but it states the
+    # invariant where someone will read it.
+    if: >-
+      github.event_name == 'push'
+      && github.ref_name == 'main'
+      && needs.deploy.result == 'success'
+    needs: [deploy]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+    concurrency:
+      group: release-main
+      cancel-in-progress: false
+    steps:
+      # Prereleases: main carries vX.Y.Z-pre.N, which SemVer orders BELOW the
+      # matching vX.Y.Z, so `go get @latest` never picks one up.
+      - name: Run Release Please
+        uses: googleapis/release-please-action@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          config-file: .release-please-config-preprod.json
+          manifest-file: .release-please-manifest-preprod.json
+          target-branch: main
+          prerelease: true
+          prerelease-type: pre
+
+  release-prod:
+    name: Release Production
+    if: >-
+      github.event_name == 'push'
+      && github.ref_name == 'prod'
+      && needs.deploy.result == 'success'
+    needs: [deploy]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+    concurrency:
+      group: release-prod
+      cancel-in-progress: false
+    steps:
+      - name: Run Release Please
+        uses: googleapis/release-please-action@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          config-file: .release-please-config.json
+          manifest-file: .release-please-manifest-prod.json
+          target-branch: prod
+          prerelease: false
