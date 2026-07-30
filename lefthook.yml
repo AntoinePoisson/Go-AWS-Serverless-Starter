@@ -1,0 +1,34 @@
+# Git hooks, installed by `npm install`.
+#
+# Skipped during a merge or a rebase: that tree belongs to commits nobody is
+# authoring.
+skip:
+  - merge
+  - rebase
+
+pre-commit:
+  parallel: true
+
+  jobs:
+    # Format then lint, never concurrently: both rewrite the same files.
+    - name: go
+      glob: "*.go"
+      group:
+        piped: true
+        jobs:
+          - name: format
+            run: go tool golangci-lint fmt {staged_files}
+            stage_fixed: true
+
+          - name: lint
+            run: go tool golangci-lint run --fix ./...
+            stage_fixed: true
+
+    - name: tidy
+      glob: "go.{mod,sum}"
+      run: go mod tidy -diff
+
+commit-msg:
+  jobs:
+    - name: commitlint
+      run: ./node_modules/.bin/commitlint --edit {1}
