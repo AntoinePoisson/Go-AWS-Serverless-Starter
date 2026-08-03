@@ -2,11 +2,14 @@ TASK ?= $(shell command -v task 2>/dev/null || echo 'go run github.com/go-task/t
 STAGE ?= alpha
 
 .DEFAULT_GOAL := help
-.PHONY: help build build-host test test-integration fmt lint tidy wire mocks docs docs-check package deploy deploy-fn remove db db-stop run-api run-public e2e clean
+.PHONY: help init build build-host test test-integration fmt lint tidy wire mocks docs docs-check package deploy deploy-fn remove db db-stop run-api run-public e2e clean
 
 help: ## Show the available targets
 	@grep -hE '^[a-z0-9-]+:.*?## ' $(MAKEFILE_LIST) \
 		| awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
+
+init: ## Rename the template and set the environment up
+	@./initialize.sh
 
 build: ## Build and package every function for Lambda
 	@$(TASK) build:dist
