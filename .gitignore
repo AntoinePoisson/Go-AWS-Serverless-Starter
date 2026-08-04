@@ -1,0 +1,16 @@
+bin/
+.coverage/
+.serverless/
+.task/
+
+node_modules/
+e2e/reports/
+e2e/test-results/
+
+# docs/openapi.yaml is committed, the reference rendered from it is not.
+docs/api.html
+docs/swagger.json
+docs/swagger.yaml
+
+.env
+.DS_Store

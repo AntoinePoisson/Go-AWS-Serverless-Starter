@@ -1,0 +1,76 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "release-type": "go",
+  "bootstrap-sha": "d20ff39eb21c6cbf7fb5bba0987fb4ad580b6986",
+  "packages": {
+    ".": {
+      "release-type": "go",
+      "package-name": "bootstrap-go-aws",
+      "changelog-path": "CHANGELOG-preprod.md",
+      "bump-minor-pre-major": true,
+      "bump-patch-for-minor-pre-major": true,
+      "include-component-in-tag": false,
+      "include-v-in-tag": true,
+      "draft": false,
+      "draft-pull-request": false,
+      "extra-files": [],
+      "changelog-sections": [
+        {
+          "type": "feat",
+          "section": "Features",
+          "hidden": false
+        },
+        {
+          "type": "fix",
+          "section": "Bug Fixes",
+          "hidden": false
+        },
+        {
+          "type": "perf",
+          "section": "Performance Improvements",
+          "hidden": false
+        },
+        {
+          "type": "refactor",
+          "section": "Code Refactoring",
+          "hidden": false
+        },
+        {
+          "type": "test",
+          "section": "Tests",
+          "hidden": false
+        },
+        {
+          "type": "build",
+          "section": "Build System",
+          "hidden": false
+        },
+        {
+          "type": "ci",
+          "section": "CI/CD",
+          "hidden": false
+        },
+        {
+          "type": "docs",
+          "section": "Documentation",
+          "hidden": false
+        },
+        {
+          "type": "revert",
+          "section": "Reverts",
+          "hidden": false
+        },
+        {
+          "type": "chore",
+          "section": "Miscellaneous",
+          "hidden": true
+        },
+        {
+          "type": "style",
+          "section": "Styling",
+          "hidden": true
+        }
+      ]
+    }
+  }
+}

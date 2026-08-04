@@ -1,0 +1,28 @@
+version: "3"
+
+tasks:
+  db:
+    desc: Start DynamoDB Local and create the items table
+    dotenv: [".env", ".env.example"]
+    cmds:
+      - docker compose up -d
+      - go run ./tools/localdb
+
+  db:stop:
+    desc: Stop DynamoDB Local
+    cmds:
+      - docker compose down
+
+  api:
+    desc: Run the api function (port from API_PORT)
+    dotenv: [".env", ".env.example"]
+    deps: [db]
+    cmds:
+      - LISTEN_ADDR=":$API_PORT" go run ./lambda/api
+
+  public:
+    desc: Run the public function (port from PUBLIC_PORT)
+    dotenv: [".env", ".env.example"]
+    deps: [db]
+    cmds:
+      - LISTEN_ADDR=":$PUBLIC_PORT" go run ./lambda/public

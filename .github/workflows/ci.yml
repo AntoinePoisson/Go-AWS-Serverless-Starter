@@ -1,0 +1,534 @@
+name: CI
+
+on:
+  push:
+    # One branch per stage: dev -> alpha, main -> preprod, prod -> prod.
+    branches: [dev, main, prod]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      stage:
+        description: Stage to deploy once every check passes
+        type: choice
+        options: [alpha, preprod, prod]
+        default: alpha
+
+# Read-only by default (least privilege). Only the deploy job widens this, and
+# only for OIDC.
+permissions:
+  contents: read
+
+# Only a pull_request run is disposable. Every push to dev, main or prod may
+# deploy, and cancelling one mid-`serverless deploy` leaves the stack in
+# UPDATE_IN_PROGRESS - a state nothing but a human gets it out of.
+#
+# This used to read `!= 'workflow_dispatch'`, which was correct only while
+# workflow_dispatch was the sole path to a deployment.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  # ============================================================
+  # LINT - Formatting and static analysis
+  # ============================================================
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      # `fmt --diff` reports instead of rewriting: a CI job that fixes the tree
+      # it is judging would pass on a commit nobody can reproduce locally.
+      - name: Verify the formatting
+        run: |
+          go tool golangci-lint fmt --diff || {
+            echo "::error::sources are not formatted. Run 'make fmt' and commit the result."
+            exit 1
+          }
+
+      # govet and staticcheck are part of the linter set in .golangci.yml.
+      # godox is added here for the same reason the pre-commit hook adds it on a
+      # protected branch: an unfinished thought must not reach main.
+      - name: Run golangci-lint
+        run: go tool golangci-lint run --enable=godox ./...
+
+      # gosec covers the patterns, this covers the published CVEs. It reports
+      # only the vulnerable symbols actually reachable from this code.
+      - name: Check the dependencies for known vulnerabilities
+        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+
+  # ============================================================
+  # UNIT TESTS - Every package, race detector on
+  # ============================================================
+  test-unit:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Run the unit tests with the race detector and coverage
+        run: |
+          mkdir -p .coverage
+          go test -race -cover -coverprofile=.coverage/report.out ./...
+
+      - name: Upload the coverage profile
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-profile
+          path: .coverage/report.out
+          retention-days: 7
+          if-no-files-found: ignore
+
+  # ============================================================
+  # INTEGRATION TESTS - Repository against DynamoDB Local
+  # ============================================================
+  test-integration:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      dynamodb:
+        image: amazon/dynamodb-local:latest
+        ports:
+          - 8000:8000
+    env:
+      DYNAMODB_ENDPOINT: http://localhost:8000
+      AWS_REGION: eu-west-1
+      AWS_ACCESS_KEY_ID: local
+      AWS_SECRET_ACCESS_KEY: local
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      # The suite creates its own table, so DynamoDB Local only has to answer.
+      - name: Run the repository integration tests
+        run: go test -tags=integration -count=1 ./internal/item/...
+
+  # ============================================================
+  # BUILD - The artifacts every later job consumes
+  # ============================================================
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      # Mirrors tasks/build.yml, inlined so the workflow needs nothing but Go.
+      - name: Compile both functions for Lambda (linux/arm64)
+        run: |
+          for dir in lambda/*/; do
+            name=$(basename "$dir")
+            mkdir -p "bin/dist/$name"
+            CGO_ENABLED=0 GOOS=linux GOARCH=arm64 \
+              go build -trimpath -ldflags "-s -w" -o "bin/dist/$name/bootstrap" "./lambda/$name"
+          done
+
+      - name: Package each function into a deployment zip
+        run: |
+          for dir in bin/dist/*/; do
+            name=$(basename "$dir")
+            (cd "$dir" && zip -q -X "../$name.zip" bootstrap)
+          done
+
+      - name: Upload the Lambda artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: lambda-artifacts
+          path: bin/dist/*.zip
+          retention-days: 7
+
+  # ============================================================
+  # END-TO-END TESTS - Playwright against both running functions
+  # ============================================================
+  test-e2e:
+    name: End-to-End Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      dynamodb:
+        image: amazon/dynamodb-local:latest
+        ports:
+          - 8000:8000
+    env:
+      STAGE: ci
+      ITEMS_TABLE: bootstrap-go-aws-ci-items
+      API_KEY: ci-key
+      E2E_API_KEY: ci-key
+      DYNAMODB_ENDPOINT: http://localhost:8000
+      AWS_REGION: eu-west-1
+      AWS_ACCESS_KEY_ID: local
+      AWS_SECRET_ACCESS_KEY: local
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: e2e/package-lock.json
+
+      - name: Install the Playwright dependencies
+        run: npm --prefix e2e ci
+
+      - name: Type-check the test suite
+        run: npm --prefix e2e run typecheck
+
+      - name: Create the items table in DynamoDB Local
+        run: go run ./tools/localdb
+
+      - name: Start both functions and wait for them to listen
+        run: |
+          LISTEN_ADDR=:8080 go run ./lambda/api &
+          LISTEN_ADDR=:8081 go run ./lambda/public &
+          for port in 8080 8081; do
+            for _ in $(seq 30); do
+              nc -z localhost "$port" && continue 2
+              sleep 1
+            done
+            echo "the function on port $port never started listening"
+            exit 1
+          done
+
+      - name: Run the Playwright tests
+        run: npm --prefix e2e test
+
+      - name: Upload the Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: e2e/reports
+          retention-days: 7
+          if-no-files-found: ignore
+
+  # ============================================================
+  # API DOCUMENTATION - The specification is generated, so it can drift
+  # ============================================================
+  openapi:
+    name: API Documentation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install the documentation tooling
+        run: npm ci
+
+      # The same command `make docs` runs, inlined so the workflow needs no
+      # task binary. --parseInternal is what keeps the specification from
+      # coming out empty; see tasks/docs.yml.
+      - name: Regenerate the specification
+        run: |
+          go tool swag init --v3.1 -ot yaml --parseInternal \
+            -g openapi.go \
+            -d ./docs,./lambda/api/internal/handler/items,./lambda/public/internal/handler/health,./lambda/public/internal/handler/items,./internal/item,./internal/httpx \
+            -o docs
+          mv docs/swagger.yaml docs/openapi.yaml
+
+      - name: Fail if the committed specification is stale
+        run: |
+          git diff --exit-code -- docs/openapi.yaml || {
+            echo "::error::docs/openapi.yaml does not match the annotations. Run 'make docs' and commit the result."
+            exit 1
+          }
+
+      - name: Lint the specification
+        run: npx redocly lint docs/openapi.yaml
+
+      - name: Render the reference
+        run: npx redocly build-docs docs/openapi.yaml -o docs/api.html
+
+      # Not committed - see .gitignore. Downloading the artifact is how you read
+      # the reference for a given commit.
+      - name: Upload the rendered reference
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-reference
+          path: docs/api.html
+          retention-days: 7
+
+  # ============================================================
+  # INFRASTRUCTURE - Render every stage without deploying
+  # ============================================================
+  infra:
+    name: Infrastructure
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [build]
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install the Serverless Framework
+        run: npm ci
+
+      - name: Download the Lambda artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: lambda-artifacts
+          path: bin/dist
+
+      # Catches route collisions, unresolved variables and malformed resources
+      # before anyone tries to deploy.
+      - name: Render the CloudFormation template of every stage
+        run: |
+          for stage in alpha preprod prod; do
+            echo "::group::$stage"
+            npx serverless package --stage "$stage"
+            echo "::endgroup::"
+          done
+        env:
+          DEPLOY_API_KEY: rendered-in-ci
+
+  # ============================================================
+  # RESOLVE - Which stage, and which version to report
+  # ============================================================
+  resolve:
+    name: Resolve Target
+    # Skipping this job skips deploy with it, which is how a pull request and a
+    # push to an unrelated branch stop short of AWS.
+    if: >-
+      github.event_name == 'workflow_dispatch'
+      || (github.event_name == 'push'
+          && contains(fromJSON('["dev","main","prod"]'), github.ref_name))
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      stage: ${{ steps.target.outputs.stage }}
+      version: ${{ steps.target.outputs.version }}
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      # A job rather than an inline `${{ }}` on the deploy job, because an
+      # expression has no `exit 1`: an unknown ref must fail, not default to a
+      # stage nobody chose.
+      - name: Resolve the stage and the version
+        id: target
+        run: |
+          set -euo pipefail
+
+          if [ -n "${{ inputs.stage }}" ]; then
+            stage="${{ inputs.stage }}"
+          else
+            case "${{ github.ref_name }}" in
+            dev)  stage=alpha   ;;
+            main) stage=preprod ;;
+            prod) stage=prod    ;;
+            *) echo "::error::no stage is mapped to ref ${{ github.ref_name }}"; exit 1 ;;
+            esac
+          fi
+
+          # The version GET /health reports.
+          #
+          # "Deploy first, release after" means the tag for this commit does not
+          # exist yet, so `git describe` could only ever report the PREVIOUS tag
+          # plus a distance. The Release Please manifest does better: on the
+          # commit that merges a release pull request it already holds the new
+          # version, so the deployed value and the tag created seconds later
+          # agree exactly. On any other commit it reads "the last release, plus
+          # this commit", which is precise rather than approximate.
+          #
+          # alpha and preprod share the preprod manifest: dev is upstream of main.
+          manifest=.release-please-manifest-preprod.json
+          [ "$stage" = prod ] && manifest=.release-please-manifest-prod.json
+
+          if [ -f "$manifest" ]; then
+            base=$(jq -r '.["."]' "$manifest")
+          else
+            # Release Please has not been set up (or was removed downstream).
+            base=0.0.0
+            echo "::warning::$manifest is missing, reporting $base as the base version"
+          fi
+
+          # `+build` is SemVer build metadata: valid, ignored by precedence
+          # ordering, and accepted as-is in a Lambda environment variable.
+          version="${base}+${GITHUB_SHA::7}"
+
+          echo "stage=$stage"     >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Deploying **$stage** as \`$version\`" >> "$GITHUB_STEP_SUMMARY"
+
+  # ============================================================
+  # DEPLOY - Ships the artifacts the checks ran against
+  # ============================================================
+  deploy:
+    name: Deploy ${{ needs.resolve.outputs.stage }}
+    # No `always()` anywhere in this job, unlike the template this pipeline is
+    # modelled on. It downloads `lambda-artifacts`, so always() would only ever
+    # unblock the "build green, tests red" case - exactly the one to forbid. A
+    # failed serverless deploy can leave the stack in UPDATE_ROLLBACK_FAILED,
+    # preprod retains its table and rehearses prod, and a green deploy on main
+    # triggers a release: none of that survives shipping known-broken code.
+    #
+    # If dev ever feels too slow, shorten its barrier - do not remove it.
+    needs: [resolve, lint, test-unit, test-integration, openapi, build, test-e2e, infra]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: ${{ needs.resolve.outputs.stage }}
+    permissions:
+      contents: read
+      id-token: write
+    concurrency:
+      group: deploy-${{ needs.resolve.outputs.stage }}
+      cancel-in-progress: false
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install the Serverless Framework
+        run: npm ci
+
+      # The very zips the checks ran against, never a fresh build.
+      - name: Download the Lambda artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: lambda-artifacts
+          path: bin/dist
+
+      - name: Assume the deployment role through OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Deploy the stack
+        run: npx serverless deploy --stage "$STAGE"
+        env:
+          STAGE: ${{ needs.resolve.outputs.stage }}
+          VERSION: ${{ needs.resolve.outputs.version }}
+
+  # ============================================================
+  # RELEASE - Deploy first, release after: a tag never points at code
+  # that was never deployed
+  # ============================================================
+  #
+  # Two configurations rather than one, and this is the point: both branches
+  # write a changelog, and if they wrote the SAME file they would both insert at
+  # the top of it, guaranteeing a merge conflict on every single release. main
+  # writes CHANGELOG-preprod.md, prod writes CHANGELOG.md, and the manifests are
+  # likewise per-branch, so nothing the two lines produce ever collides.
+  #
+  # Do NOT enable auto-merge on the release pull requests: a push authenticated
+  # with GITHUB_TOKEN triggers no workflow, so the tagged version would never be
+  # deployed. A human merging is what starts the pipeline that ships it.
+  release-preprod:
+    name: Release Preprod
+    # `needs.deploy.result` is belt and braces - an `if:` with no status
+    # function already implies success() over every need - but it states the
+    # invariant where someone will read it.
+    if: >-
+      github.event_name == 'push'
+      && github.ref_name == 'main'
+      && needs.deploy.result == 'success'
+    needs: [deploy]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+    concurrency:
+      group: release-main
+      cancel-in-progress: false
+    steps:
+      # Prereleases: main carries vX.Y.Z-pre.N, which SemVer orders BELOW the
+      # matching vX.Y.Z, so `go get @latest` never picks one up.
+      - name: Run Release Please
+        uses: googleapis/release-please-action@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          config-file: .release-please-config-preprod.json
+          manifest-file: .release-please-manifest-preprod.json
+          target-branch: main
+          prerelease: true
+          prerelease-type: pre
+
+  release-prod:
+    name: Release Production
+    if: >-
+      github.event_name == 'push'
+      && github.ref_name == 'prod'
+      && needs.deploy.result == 'success'
+    needs: [deploy]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+    concurrency:
+      group: release-prod
+      cancel-in-progress: false
+    steps:
+      - name: Run Release Please
+        uses: googleapis/release-please-action@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          config-file: .release-please-config.json
+          manifest-file: .release-please-manifest-prod.json
+          target-branch: prod
+          prerelease: false

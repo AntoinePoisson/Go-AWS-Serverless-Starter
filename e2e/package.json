@@ -1,0 +1,16 @@
+{
+  "name": "bootstrap-go-aws-e2e",
+  "version": "0.1.0",
+  "description": "End-to-end tests of the starter API",
+  "private": true,
+  "scripts": {
+    "test": "playwright test",
+    "report": "playwright show-report reports",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.62.1",
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.3"
+  }
+}

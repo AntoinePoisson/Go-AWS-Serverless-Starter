@@ -1,0 +1,132 @@
+package item_test
+
+import (
+	"errors"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
+
+	"github.com/antoinepoisson/bootstrap-go-aws/internal/item"
+	"github.com/antoinepoisson/bootstrap-go-aws/internal/item/mock_item"
+)
+
+func TestServiceCreate(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	repo := mock_item.NewMockRepository(ctrl)
+
+	var stored *item.Item
+	repo.EXPECT().Put(gomock.Any(), gomock.Any()).DoAndReturn(func(_ any, i *item.Item) error {
+		stored = i
+		return nil
+	})
+
+	created, err := item.NewService(repo).Create(t.Context(), item.CreateInput{
+		Name:     "  demo  ",
+		Tags:     []string{"starter"},
+		Metadata: map[string]string{"owner": "team"},
+	})
+	require.NoError(t, err)
+
+	assert.Equal(t, "demo", created.Name)
+	assert.NotEmpty(t, created.ID)
+	assert.WithinDuration(t, time.Now(), created.CreatedAt, time.Minute)
+	assert.Equal(t, []string{"starter"}, created.Tags)
+	assert.Equal(t, created, stored)
+}
+
+func TestServiceCreateRejectsInvalidInput(t *testing.T) {
+	cases := []struct {
+		name  string
+		input item.CreateInput
+	}{
+		{name: "empty name", input: item.CreateInput{Name: ""}},
+		{name: "blank name", input: item.CreateInput{Name: "   "}},
+		{name: "name too long", input: item.CreateInput{Name: strings.Repeat("a", 201)}},
+		{name: "too many tags", input: item.CreateInput{Name: "demo", Tags: make([]string, 21)}},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			repo := mock_item.NewMockRepository(ctrl)
+
+			_, err := item.NewService(repo).Create(t.Context(), c.input)
+
+			assert.ErrorIs(t, err, item.ErrInvalidInput)
+		})
+	}
+}
+
+func TestServiceCreatePropagatesRepositoryError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	repo := mock_item.NewMockRepository(ctrl)
+	failure := errors.New("throughput exceeded")
+
+	repo.EXPECT().Put(gomock.Any(), gomock.Any()).Return(failure)
+
+	_, err := item.NewService(repo).Create(t.Context(), item.CreateInput{Name: "demo"})
+
+	assert.ErrorIs(t, err, failure)
+}
+
+func TestServiceGet(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	repo := mock_item.NewMockRepository(ctrl)
+	stored := &item.Item{ID: "42", Name: "demo"}
+
+	repo.EXPECT().Get(gomock.Any(), "42").Return(stored, nil)
+
+	got, err := item.NewService(repo).Get(t.Context(), "42")
+	require.NoError(t, err)
+
+	assert.Equal(t, stored, got)
+}
+
+func TestServiceGetRejectsEmptyID(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	repo := mock_item.NewMockRepository(ctrl)
+
+	_, err := item.NewService(repo).Get(t.Context(), " ")
+
+	assert.ErrorIs(t, err, item.ErrInvalidInput)
+}
+
+func TestServiceDelete(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	repo := mock_item.NewMockRepository(ctrl)
+
+	repo.EXPECT().Delete(gomock.Any(), "42").Return(item.ErrNotFound)
+
+	err := item.NewService(repo).Delete(t.Context(), "42")
+
+	assert.ErrorIs(t, err, item.ErrNotFound)
+}
+
+func TestServiceListClampsLimit(t *testing.T) {
+	cases := []struct {
+		name      string
+		limit     int32
+		wantLimit int32
+	}{
+		{name: "zero falls back to default", limit: 0, wantLimit: 25},
+		{name: "negative falls back to default", limit: -5, wantLimit: 25},
+		{name: "above maximum falls back to default", limit: 500, wantLimit: 25},
+		{name: "within range is kept", limit: 10, wantLimit: 10},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			repo := mock_item.NewMockRepository(ctrl)
+
+			repo.EXPECT().List(gomock.Any(), c.wantLimit).Return([]item.Item{}, nil)
+
+			_, err := item.NewService(repo).List(t.Context(), c.limit)
+			require.NoError(t, err)
+		})
+	}
+}

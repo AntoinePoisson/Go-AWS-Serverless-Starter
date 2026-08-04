@@ -1,0 +1,99 @@
+# One config for both commands: `make fmt` runs the formatters, `make lint` the
+# linters. govet and staticcheck are in the standard set, so there is no
+# separate step for them.
+version: "2"
+
+linters:
+  default: standard # errcheck, govet, ineffassign, staticcheck, unused
+
+  # godox (TODO, FIXME) is missing on purpose: CI and the pre-commit hook turn it
+  # on for the protected branches, where an unfinished thought matters.
+  enable:
+    - bodyclose
+    - copyloopvar
+    - errorlint # errors.Is/As over ==, which internal/item/errors.go relies on
+    - gosec
+    - misspell
+    - nilerr
+    - noctx
+    - revive
+    - sloglint
+    - testifylint
+    - unconvert
+    - usetesting
+    - wastedassign
+
+  settings:
+    errcheck:
+      check-type-assertions: true
+
+    gosec:
+      excludes:
+        - G404 # math/rand is not used for anything security-bearing here
+
+    revive:
+      # Defaults for `exported`: checkPrivateReceivers would ask for a doc
+      # comment on every ResponseWriter method of an unexported type.
+      rules:
+        - name: exported
+        - name: context-as-argument
+        - name: error-strings
+        - name: error-return
+        - name: errorf
+        - name: indent-error-flow
+        - name: range-val-in-closure
+        - name: unexported-return
+        - name: unreachable-code
+        - name: var-declaration
+
+    sloglint:
+      no-mixed-args: true
+      kv-only: true # slog.Info("msg", "key", value), never attribute helpers
+      static-msg: true # the message is the event, the value goes in a key
+      key-naming-case: snake # reads best in a CloudWatch Logs Insights query
+
+    testifylint:
+      disable:
+        # The recover middleware test asserts on a deliberately truncated body,
+        # which JSONEq cannot parse.
+        - encoded-compare
+
+    staticcheck:
+      checks:
+        - all
+        - -ST1000 # a package comment on every package is a library convention
+
+  exclusions:
+    generated: lax
+    presets:
+      - common-false-positives
+      - std-error-handling
+
+    rules:
+      - path: _test\.go
+        linters:
+          - bodyclose
+          - errcheck
+          - gosec
+          - noctx
+
+      # docs/ declares no symbol, only swag annotations.
+      - path: ^docs/
+        linters:
+          - revive
+
+formatters:
+  enable:
+    - gci
+    - gofumpt
+    - swaggo # keeps the OpenAPI annotations aligned
+
+  settings:
+    gci:
+      sections:
+        - standard
+        - default
+        - prefix(github.com/antoinepoisson/bootstrap-go-aws)
+
+    gofumpt:
+      extra-rules: true

@@ -1,0 +1,9 @@
+version: "3"
+
+tasks:
+  all:
+    desc: Remove every build and test artifact
+    cmds:
+      # docs/openapi.yaml is not listed: it is committed, and `make docs`
+      # rewrites it. docs/api.html is a build output and goes.
+      - rm -rf bin .coverage .serverless node_modules e2e/node_modules e2e/reports docs/api.html docs/swagger.json docs/swagger.yaml

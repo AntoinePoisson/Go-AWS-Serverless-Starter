@@ -1,0 +1,145 @@
+# Git hooks, installed by `npm install`. See https://lefthook.dev
+#
+# Fast checks on commit, the authoritative ones on push. Anything that rewrites
+# a file runs in a `piped` group so two commands never touch the same *.go at
+# once.
+#
+# Skipped during a merge or a rebase, where the tree being rewritten belongs to
+# commits nobody is authoring.
+skip:
+  - merge
+  - rebase
+
+pre-commit:
+  parallel: true
+
+  jobs:
+    # Format then lint, never concurrently: both rewrite the same files.
+    - name: go
+      glob: "*.go"
+      group:
+        piped: true
+        jobs:
+          - name: format
+            run: go tool golangci-lint fmt {staged_files}
+            stage_fixed: true
+
+          # Full config plus godox on the protected branches, new issues only
+          # anywhere else, so inherited problems do not block the fix at hand.
+          # Packages rather than files: a file-level run reports differently
+          # from the package-level run CI does.
+          - name: lint
+            run: |
+              set -eu
+              # --show-current, not rev-parse HEAD: the latter fails on the
+              # initial commit, where HEAD points at no revision yet.
+              branch=$(git branch --show-current)
+
+              case "$branch" in
+              dev | main | prod)
+                echo "strict lint on $branch"
+                go tool golangci-lint run --fix --enable=godox ./...
+                ;;
+              *)
+                dirs=$(printf '%s\n' {staged_files} | xargs -n1 dirname | sort -u)
+
+                # A missing remote ref makes the merge base wrong, so fall back
+                # to a full lint of the staged packages.
+                for candidate in origin/dev origin/main; do
+                  if git rev-parse --verify --quiet "$candidate" >/dev/null; then
+                    echo "incremental lint on $branch (new issues since $candidate)"
+                    # shellcheck disable=SC2086
+                    exec go tool golangci-lint run --fix --new-from-merge-base="$candidate" $dirs
+                  fi
+                done
+
+                echo "no upstream branch to compare against, linting the staged packages"
+                # shellcheck disable=SC2086
+                go tool golangci-lint run --fix $dirs
+                ;;
+              esac
+            stage_fixed: true
+
+    # An index check rather than a regeneration: it catches staging the input of
+    # a generator without its output. Regenerating happens at pre-push.
+    - name: generated-staged
+      run: |
+        set -eu
+        staged=$(git diff --cached --name-only --diff-filter=ACMR)
+        fail=0
+
+        note() {
+          printf '  %s\n' "$1" >&2
+          fail=1
+        }
+
+        # An interface changed but its mock did not. Scoped like `make mocks`,
+        # which also keeps docs/openapi.go out of it.
+        for f in $(printf '%s\n' "$staged" | grep -E '^(internal|lambda)/.*api\.go$' | grep -v '/mock_' || true); do
+          dir=$(dirname "$f")
+          mock="$dir/mock_$(basename "$dir")/mock$(basename "$f")"
+          printf '%s\n' "$staged" | grep -qxF "$mock" || note "$f is staged, $mock is not - run 'make mocks'"
+        done
+
+        # The dependency graph changed but the injector did not.
+        for f in $(printf '%s\n' "$staged" | grep -E 'lambda/[^/]+/wire\.go$' || true); do
+          gen="$(dirname "$f")/wire_gen.go"
+          printf '%s\n' "$staged" | grep -qxF "$gen" || note "$f is staged, $gen is not - run 'make wire'"
+        done
+
+        # A swag annotation changed but the specification did not. Grepping the
+        # added lines keeps this instant.
+        if git diff --cached -U0 -- '*.go' | grep -qE '^\+[[:space:]]*//[[:space:]]*@(Router|Success|Failure|Param|Header|Security|Id|Tags|Summary|Description|Accept|Produce|title|version|servers|tag|securityDefinitions)'; then
+          printf '%s\n' "$staged" | grep -qxF 'docs/openapi.yaml' || note "a swag annotation changed but docs/openapi.yaml is not staged - run 'make docs'"
+        fi
+
+        [ "$fail" -eq 0 ] || exit 1
+        echo "generated files are consistent with what is staged"
+
+    - name: tidy
+      glob: "go.{mod,sum}"
+      run: go mod tidy -diff
+
+# Everything here also runs in CI. Not parallel: the first group rewrites the
+# tree the second one compiles. Through `make`, never `task`, because the
+# Makefile falls back to `go run` on a fresh clone.
+pre-push:
+  piped: true
+
+  jobs:
+    # Regenerate, then refuse to push on drift. Sequential: mockgen writes files
+    # wire reads, and swag parses what both produce.
+    - name: generated
+      group:
+        piped: true
+        jobs:
+          - name: wire
+            run: make wire
+          - name: mocks
+            run: make mocks
+          - name: openapi
+            run: make docs-check
+          - name: drift
+            run: |
+              git diff --exit-code -- 'lambda/*/wire_gen.go' 'internal/**/mock_*' 'lambda/**/mock_*' docs/openapi.yaml || {
+                echo ""
+                echo "generated files were out of date and have just been rewritten."
+                echo "review the diff, 'git add' it, amend or commit, then push again."
+                exit 1
+              }
+
+    # Safe in parallel: nothing here writes a source file. On every branch, not
+    # just the protected ones - it takes seconds.
+    - name: verify
+      group:
+        parallel: true
+        jobs:
+          - name: build
+            run: make build-host
+          - name: test
+            run: make test
+
+commit-msg:
+  jobs:
+    - name: commitlint
+      run: ./node_modules/.bin/commitlint --edit {1}

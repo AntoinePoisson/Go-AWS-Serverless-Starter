@@ -1,0 +1,48 @@
+# Redocly CLI: validates docs/openapi.yaml and renders the reference.
+#
+# `recommended` is the right target, but on day one it is a wall of errors: it
+# wants a licence, a summary and a description on every operation, and a 4xx on
+# every path. The rules below are downgraded to warnings so the gate is the
+# validity of the specification rather than its completeness. Promote them back
+# to `error` one at a time as the annotations fill in.
+extends:
+  - recommended
+
+apis:
+  main:
+    root: docs/openapi.yaml
+
+rules:
+  # An operation that forgot @Security would silently document itself as open,
+  # so this stays an error. The two routes below are open by design and are
+  # named one by one rather than downgraded: a new unauthenticated route is
+  # then a decision someone has to write down here, not an oversight that
+  # slips through.
+  #
+  # swag has no way to emit `security: []`, which is how OpenAPI says "public",
+  # hence the exception list rather than an annotation.
+  security-defined:
+    severity: error
+    exceptions:
+      - path: /health
+        methods: [get]
+      - path: /public/items/{id}
+        methods: [get]
+
+  operation-operationId-unique: error
+  no-invalid-media-type-examples: error
+
+  # The licence belongs to the project built from this template, not to the
+  # template. Declare it in docs/openapi.go and promote this to `error`.
+  info-license: warn
+
+  # Filled in by @Summary and @Description as the annotations grow.
+  operation-summary: warn
+  operation-description: warn
+
+  # /health answers 200 or nothing at all, so it has no 4xx to document.
+  operation-4xx-response: warn
+
+  # The localhost servers are real addresses, not placeholders: they are what
+  # `make run-api` and `make run-public` bind to.
+  no-server-example.com: warn

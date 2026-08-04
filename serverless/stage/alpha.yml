@@ -1,0 +1,14 @@
+region: eu-west-1
+logLevel: debug
+logRetentionInDays: 7
+pointInTimeRecovery: false
+
+# Dropped with the stack, so the stage leaves nothing behind.
+tableDeletionPolicy: Delete
+
+corsOrigins:
+  - "*"
+
+# Read from SSM. Set DEPLOY_API_KEY to override, which also lets `make package`
+# render the template without AWS credentials.
+apiKey: ${env:DEPLOY_API_KEY, ssm:/${self:service}/alpha/api-key}
