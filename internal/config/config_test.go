@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/antoinepoisson/bootstrap-go-aws/internal/config"
+	"github.com/AntoinePoisson/go-aws-serverless-starter/internal/config"
 )
 
 func TestLoadAppliesDefaults(t *testing.T) {

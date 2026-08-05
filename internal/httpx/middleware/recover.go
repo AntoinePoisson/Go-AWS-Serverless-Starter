@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"runtime/debug"
 
-	"github.com/antoinepoisson/bootstrap-go-aws/internal/httpx"
+	"github.com/AntoinePoisson/go-aws-serverless-starter/internal/httpx"
 )
 
 // Recover turns a panic into a 500 response instead of killing the process.

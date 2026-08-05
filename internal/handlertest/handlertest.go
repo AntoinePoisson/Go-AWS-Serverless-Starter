@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
-	"github.com/antoinepoisson/bootstrap-go-aws/internal/httpx"
+	"github.com/AntoinePoisson/go-aws-serverless-starter/internal/httpx"
 )
 
 // Case describes a single handler test case.

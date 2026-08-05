@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/antoinepoisson/bootstrap-go-aws/internal/httpx"
+	"github.com/AntoinePoisson/go-aws-serverless-starter/internal/httpx"
 )
 
 func TestWriteJSON(t *testing.T) {

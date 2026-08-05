@@ -7,11 +7,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
-	"github.com/antoinepoisson/bootstrap-go-aws/internal/handlertest"
-	"github.com/antoinepoisson/bootstrap-go-aws/internal/httpx"
-	"github.com/antoinepoisson/bootstrap-go-aws/internal/item"
-	"github.com/antoinepoisson/bootstrap-go-aws/internal/item/mock_item"
-	"github.com/antoinepoisson/bootstrap-go-aws/lambda/public/internal/handler/items"
+	"github.com/AntoinePoisson/go-aws-serverless-starter/internal/handlertest"
+	"github.com/AntoinePoisson/go-aws-serverless-starter/internal/httpx"
+	"github.com/AntoinePoisson/go-aws-serverless-starter/internal/item"
+	"github.com/AntoinePoisson/go-aws-serverless-starter/internal/item/mock_item"
+	"github.com/AntoinePoisson/go-aws-serverless-starter/lambda/public/internal/handler/items"
 )
 
 func newHandler(expect func(*mock_item.MockServiceAPI)) func(*gomock.Controller) httpx.Handler {

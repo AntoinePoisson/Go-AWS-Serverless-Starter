@@ -7,9 +7,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/antoinepoisson/bootstrap-go-aws/internal/config"
-	"github.com/antoinepoisson/bootstrap-go-aws/lambda/public/internal/handler/health"
-	"github.com/antoinepoisson/bootstrap-go-aws/lambda/public/internal/handler/items"
+	"github.com/AntoinePoisson/go-aws-serverless-starter/internal/config"
+	"github.com/AntoinePoisson/go-aws-serverless-starter/lambda/public/internal/handler/health"
+	"github.com/AntoinePoisson/go-aws-serverless-starter/lambda/public/internal/handler/items"
 )
 
 func TestNewHandlerServesHealthWithoutAKey(t *testing.T) {

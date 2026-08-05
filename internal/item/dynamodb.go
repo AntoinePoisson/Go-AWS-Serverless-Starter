@@ -10,7 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 
-	"github.com/antoinepoisson/bootstrap-go-aws/internal/config"
+	"github.com/AntoinePoisson/go-aws-serverless-starter/internal/config"
 )
 
 var _ Repository = (*DynamoDBRepository)(nil)

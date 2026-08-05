@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/antoinepoisson/bootstrap-go-aws/internal/httpx/middleware"
+	"github.com/AntoinePoisson/go-aws-serverless-starter/internal/httpx/middleware"
 )
 
 // captureContextLog installs the decorated handler, runs h behind the RequestID

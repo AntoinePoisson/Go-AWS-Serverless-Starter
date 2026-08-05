@@ -1,5 +1,5 @@
 {
-  "name": "bootstrap-go-aws-e2e",
+  "name": "go-aws-serverless-starter-e2e",
   "version": "0.1.0",
   "description": "End-to-end tests of the starter API",
   "private": true,

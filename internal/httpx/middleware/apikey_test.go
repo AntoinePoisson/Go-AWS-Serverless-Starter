@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/antoinepoisson/bootstrap-go-aws/internal/httpx/middleware"
+	"github.com/AntoinePoisson/go-aws-serverless-starter/internal/httpx/middleware"
 )
 
 func TestAPIKey(t *testing.T) {

@@ -189,7 +189,7 @@ jobs:
           - 8000:8000
     env:
       STAGE: ci
-      ITEMS_TABLE: bootstrap-go-aws-ci-items
+      ITEMS_TABLE: go-aws-serverless-starter-ci-items
       API_KEY: ci-key
       E2E_API_KEY: ci-key
       DYNAMODB_ENDPOINT: http://localhost:8000

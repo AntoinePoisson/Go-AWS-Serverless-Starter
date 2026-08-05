@@ -1,4 +1,4 @@
-service: bootstrap-go-aws
+service: go-aws-serverless-starter
 
 frameworkVersion: "3"
 

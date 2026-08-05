@@ -13,7 +13,7 @@ import (
 	context "context"
 	reflect "reflect"
 
-	item "github.com/antoinepoisson/bootstrap-go-aws/internal/item"
+	item "github.com/AntoinePoisson/go-aws-serverless-starter/internal/item"
 	gomock "go.uber.org/mock/gomock"
 )
 

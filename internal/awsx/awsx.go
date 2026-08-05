@@ -9,7 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/google/wire"
 
-	"github.com/antoinepoisson/bootstrap-go-aws/internal/config"
+	"github.com/AntoinePoisson/go-aws-serverless-starter/internal/config"
 )
 
 // WireSet provides the AWS clients to the dependency graph.

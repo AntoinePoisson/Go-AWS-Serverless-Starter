@@ -8,10 +8,10 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/google/wire"
 
-	"github.com/antoinepoisson/bootstrap-go-aws/internal/awsx"
-	"github.com/antoinepoisson/bootstrap-go-aws/internal/config"
-	"github.com/antoinepoisson/bootstrap-go-aws/internal/item"
-	"github.com/antoinepoisson/bootstrap-go-aws/lambda/api/internal/handler/items"
+	"github.com/AntoinePoisson/go-aws-serverless-starter/internal/awsx"
+	"github.com/AntoinePoisson/go-aws-serverless-starter/internal/config"
+	"github.com/AntoinePoisson/go-aws-serverless-starter/internal/item"
+	"github.com/AntoinePoisson/go-aws-serverless-starter/lambda/api/internal/handler/items"
 )
 
 func inject(cfg *config.Config) (http.Handler, error) {

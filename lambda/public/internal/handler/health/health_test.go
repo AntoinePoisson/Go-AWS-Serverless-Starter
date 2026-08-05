@@ -7,10 +7,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
-	"github.com/antoinepoisson/bootstrap-go-aws/internal/config"
-	"github.com/antoinepoisson/bootstrap-go-aws/internal/handlertest"
-	"github.com/antoinepoisson/bootstrap-go-aws/internal/httpx"
-	"github.com/antoinepoisson/bootstrap-go-aws/lambda/public/internal/handler/health"
+	"github.com/AntoinePoisson/go-aws-serverless-starter/internal/config"
+	"github.com/AntoinePoisson/go-aws-serverless-starter/internal/handlertest"
+	"github.com/AntoinePoisson/go-aws-serverless-starter/internal/httpx"
+	"github.com/AntoinePoisson/go-aws-serverless-starter/lambda/public/internal/handler/health"
 )
 
 func TestHandler(t *testing.T) {
