@@ -5,16 +5,19 @@ version: "3"
 vars:
   STAGE: '{{ .STAGE | default "alpha" }}'
 
+# A task named in an included file resolves inside that file's namespace, so a
+# bare `build:dist` here means `deploy:build:dist` - which does not exist. The
+# leading colon addresses the root Taskfile instead.
 tasks:
   package:
     desc: Build the CloudFormation template without deploying (STAGE=alpha)
-    deps: [build:dist]
+    deps: [":build:dist"]
     cmds:
       - npx --no-install serverless package --stage {{ .STAGE }}
 
   stack:
     desc: Deploy the whole stack (STAGE=alpha)
-    deps: [build:dist]
+    deps: [":build:dist"]
     cmds:
       - npx --no-install serverless deploy --stage {{ .STAGE }}
 
@@ -23,7 +26,7 @@ tasks:
     requires:
       vars: [NAME]
     cmds:
-      - task: build:one
+      - task: ":build:one"
         vars: { NAME: "{{ .NAME }}" }
       - npx --no-install serverless deploy function --function {{ .NAME }} --stage {{ .STAGE }}
 
