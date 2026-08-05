@@ -1,0 +1,84 @@
+name: Documentation
+
+# docs/api.html is generated and not committed (see .gitignore), so outside a
+# clone the only way to read the reference was to download a CI artifact. This
+# publishes the one built from main, at a URL a link can point at.
+#
+# It needs Pages turned on with Settings -> Pages -> Source: GitHub Actions.
+# Until that is done the deployment step fails - the job says so rather than
+# publishing nothing quietly.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One publication at a time, and never cancelled halfway: an interrupted
+# deploy-pages leaves the Pages deployment in progress until it times out.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish the API reference
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install the documentation tooling
+        run: npm ci
+
+      # Regenerated rather than read from the tree: the CI job of the same
+      # commit already fails when the two disagree, so this cannot publish a
+      # specification the annotations do not describe.
+      - name: Regenerate the specification
+        run: |
+          go tool swag init --v3.1 -ot yaml --parseInternal \
+            -g openapi.go \
+            -d ./docs,./lambda/api/internal/handler/items,./lambda/public/internal/handler/health,./lambda/public/internal/handler/items,./internal/item,./internal/httpx \
+            -o docs
+          mv docs/swagger.yaml docs/openapi.yaml
+
+      - name: Render the reference
+        run: npx --no-install redocly build-docs docs/openapi.yaml -o docs/api.html
+
+      # A Pages site serves index.html at its root, and the reference is the
+      # whole site.
+      - name: Assemble the site
+        run: |
+          mkdir -p site
+          mv docs/api.html site/index.html
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v6
+
+      - name: Upload the site
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: site
+
+      - name: Deploy to Pages
+        id: deploy
+        uses: actions/deploy-pages@v5
