@@ -157,9 +157,18 @@ aws ssm put-parameter --name /bootstrap-go-aws/alpha/api-key \
   --type SecureString --value "$(openssl rand -hex 32)"
 ```
 
-CI authenticates through OIDC: set the repository variable `AWS_REGION` and the
-secret `AWS_DEPLOY_ROLE_ARN`. Production approval belongs in the `prod` GitHub
-Environment as a required reviewer.
+Deployment is opt-in, so the pipeline of a repository with no AWS account behind
+it stops after the checks instead of failing. To turn it on, set three things:
+
+| Kind | Name | Value |
+| ---- | ---- | ----- |
+| Repository variable | `DEPLOY_ENABLED` | `true` |
+| Repository variable | `AWS_REGION` | e.g. `eu-west-1` |
+| Repository secret | `AWS_DEPLOY_ROLE_ARN` | the role CI assumes through OIDC |
+
+Until `DEPLOY_ENABLED` is `true`, the deploy and release jobs are skipped and the
+run summary reports the stage and version that would have shipped. Production
+approval belongs in the `prod` GitHub Environment as a required reviewer.
 
 Two things to know before your first release: commits must follow
 [Conventional Commits](https://www.conventionalcommits.org), which `commitlint`
