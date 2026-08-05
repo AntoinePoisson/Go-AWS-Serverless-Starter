@@ -1,11 +1,9 @@
-# Git hooks, installed by `npm install`. See https://lefthook.dev
+# Git hooks, installed by `npm install`. Fast checks on commit, the
+# authoritative ones on push. Anything that rewrites a file runs in a `piped`
+# group so two commands never touch the same *.go at once.
 #
-# Fast checks on commit, the authoritative ones on push. Anything that rewrites
-# a file runs in a `piped` group so two commands never touch the same *.go at
-# once.
-#
-# Skipped during a merge or a rebase, where the tree being rewritten belongs to
-# commits nobody is authoring.
+# Skipped during a merge or a rebase: that tree belongs to commits nobody is
+# authoring.
 skip:
   - merge
   - rebase
@@ -26,13 +24,11 @@ pre-commit:
 
           # Full config plus godox on the protected branches, new issues only
           # anywhere else, so inherited problems do not block the fix at hand.
-          # Packages rather than files: a file-level run reports differently
-          # from the package-level run CI does.
           - name: lint
             run: |
               set -eu
-              # --show-current, not rev-parse HEAD: the latter fails on the
-              # initial commit, where HEAD points at no revision yet.
+              # --show-current, not rev-parse HEAD: HEAD points at no revision
+              # on the initial commit.
               branch=$(git branch --show-current)
 
               case "$branch" in
@@ -43,8 +39,7 @@ pre-commit:
               *)
                 dirs=$(printf '%s\n' {staged_files} | xargs -n1 dirname | sort -u)
 
-                # A missing remote ref makes the merge base wrong, so fall back
-                # to a full lint of the staged packages.
+                # No remote ref means no usable merge base: lint the packages.
                 for candidate in origin/dev origin/main; do
                   if git rev-parse --verify --quiet "$candidate" >/dev/null; then
                     echo "incremental lint on $branch (new issues since $candidate)"
@@ -60,8 +55,8 @@ pre-commit:
               esac
             stage_fixed: true
 
-    # An index check rather than a regeneration: it catches staging the input of
-    # a generator without its output. Regenerating happens at pre-push.
+    # An index check rather than a regeneration, which happens at pre-push: this
+    # only catches staging a generator's input without its output.
     - name: generated-staged
       run: |
         set -eu
@@ -74,7 +69,7 @@ pre-commit:
         }
 
         # An interface changed but its mock did not. Scoped like `make mocks`,
-        # which also keeps docs/openapi.go out of it.
+        # which is what keeps docs/openapi.go out of it.
         for f in $(printf '%s\n' "$staged" | grep -E '^(internal|lambda)/.*api\.go$' | grep -v '/mock_' || true); do
           dir=$(dirname "$f")
           mock="$dir/mock_$(basename "$dir")/mock$(basename "$f")"
@@ -87,8 +82,7 @@ pre-commit:
           printf '%s\n' "$staged" | grep -qxF "$gen" || note "$f is staged, $gen is not - run 'make wire'"
         done
 
-        # A swag annotation changed but the specification did not. Grepping the
-        # added lines keeps this instant.
+        # A swag annotation changed but the specification did not.
         if git diff --cached -U0 -- '*.go' | grep -qE '^\+[[:space:]]*//[[:space:]]*@(Router|Success|Failure|Param|Header|Security|Id|Tags|Summary|Description|Accept|Produce|title|version|servers|tag|securityDefinitions)'; then
           printf '%s\n' "$staged" | grep -qxF 'docs/openapi.yaml' || note "a swag annotation changed but docs/openapi.yaml is not staged - run 'make docs'"
         fi
@@ -101,14 +95,13 @@ pre-commit:
       run: go mod tidy -diff
 
 # Everything here also runs in CI. Not parallel: the first group rewrites the
-# tree the second one compiles. Through `make`, never `task`, because the
-# Makefile falls back to `go run` on a fresh clone.
+# tree the second one compiles. Through `make`, never `task`: the Makefile falls
+# back to `go run` on a fresh clone.
 pre-push:
   piped: true
 
   jobs:
-    # Regenerate, then refuse to push on drift. Sequential: mockgen writes files
-    # wire reads, and swag parses what both produce.
+    # Sequential: mockgen writes files wire reads, and swag parses both.
     - name: generated
       group:
         piped: true
@@ -128,8 +121,7 @@ pre-push:
                 exit 1
               }
 
-    # Safe in parallel: nothing here writes a source file. On every branch, not
-    # just the protected ones - it takes seconds.
+    # Safe in parallel: nothing here writes a source file.
     - name: verify
       group:
         parallel: true

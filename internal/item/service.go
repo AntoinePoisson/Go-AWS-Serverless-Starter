@@ -6,12 +6,13 @@ import (
 	"fmt"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/google/uuid"
 )
 
 const (
-	maxNameLength = 200
+	maxNameLength = 200 // runes, not bytes: accents must not halve the limit
 	maxTags       = 20
 	defaultLimit  = 25
 	maxLimit      = 100
@@ -55,7 +56,7 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (*Item, error) 
 	switch {
 	case name == "":
 		return nil, fmt.Errorf("%w: name is required", ErrInvalidInput)
-	case len(name) > maxNameLength:
+	case utf8.RuneCountInString(name) > maxNameLength:
 		return nil, fmt.Errorf("%w: name must be at most %d characters", ErrInvalidInput, maxNameLength)
 	case len(input.Tags) > maxTags:
 		return nil, fmt.Errorf("%w: at most %d tags are allowed", ErrInvalidInput, maxTags)

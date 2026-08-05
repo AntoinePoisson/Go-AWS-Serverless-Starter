@@ -291,11 +291,14 @@ jobs:
             exit 1
           }
 
+      # --no-install everywhere npx runs, as in tasks/: without it a missing
+      # node_modules is answered by a silent download of the latest release
+      # rather than by an error.
       - name: Lint the specification
-        run: npx redocly lint docs/openapi.yaml
+        run: npx --no-install redocly lint docs/openapi.yaml
 
       - name: Render the reference
-        run: npx redocly build-docs docs/openapi.yaml -o docs/api.html
+        run: npx --no-install redocly build-docs docs/openapi.yaml -o docs/api.html
 
       # Not committed - see .gitignore. Downloading the artifact is how you read
       # the reference for a given commit.
@@ -339,7 +342,7 @@ jobs:
         run: |
           for stage in alpha preprod prod; do
             echo "::group::$stage"
-            npx serverless package --stage "$stage"
+            npx --no-install serverless package --stage "$stage"
             echo "::endgroup::"
           done
         env:
@@ -464,7 +467,7 @@ jobs:
           aws-region: ${{ vars.AWS_REGION }}
 
       - name: Deploy the stack
-        run: npx serverless deploy --stage "$STAGE"
+        run: npx --no-install serverless deploy --stage "$STAGE"
         env:
           STAGE: ${{ needs.resolve.outputs.stage }}
           VERSION: ${{ needs.resolve.outputs.version }}

@@ -3,7 +3,7 @@ package middleware
 import "net/http"
 
 // responseWriter records the status a handler sent and whether it started
-// writing at all, which the middlewares need to report and to recover safely.
+// writing at all: one to report, the other to recover safely.
 type responseWriter struct {
 	http.ResponseWriter
 	status  int
@@ -26,3 +26,7 @@ func (w *responseWriter) Write(b []byte) (int, error) {
 	w.written = true
 	return w.ResponseWriter.Write(b)
 }
+
+// Unwrap is what http.ResponseController follows; without it flushing and
+// hijacking report "feature not supported" behind any middleware.
+func (w *responseWriter) Unwrap() http.ResponseWriter { return w.ResponseWriter }

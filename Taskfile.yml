@@ -33,9 +33,11 @@ tasks:
 
   test:
     desc: Run the unit tests with coverage
+    # -coverpkg to match what CI measures: most of the handler code is covered
+    # from another package's tests.
     cmds:
       - mkdir -p .coverage
-      - go test -race -cover -coverprofile=.coverage/report.out ./...
+      - go test -race -coverpkg=./... -coverprofile=.coverage/report.out ./...
 
   test:integration:
     desc: Run the integration tests against DynamoDB Local

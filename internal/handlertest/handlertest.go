@@ -47,8 +47,6 @@ func Run(t *testing.T, cases []Case) {
 				body = strings.NewReader(c.Body)
 			}
 
-			// The request carries the test's context, so a handler that
-			// respects cancellation stops when the test does.
 			req := httptest.NewRequestWithContext(t.Context(), method, c.Path, body)
 			for name, value := range c.Headers {
 				req.Header.Set(name, value)

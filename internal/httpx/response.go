@@ -23,17 +23,25 @@ func WriteJSON(w http.ResponseWriter, status int, v any) {
 	}
 }
 
-// DecodeJSON reads the request body into v. Unknown fields and bodies larger
-// than 1 MiB are rejected.
+// DecodeJSON reads the request body into v. Unknown fields are rejected, and a
+// body over 1 MiB is a 413 rather than a parse error.
 func DecodeJSON(r *http.Request, v any) error {
 	defer r.Body.Close()
 
-	dec := json.NewDecoder(io.LimitReader(r.Body, maxBodySize))
+	// Not io.LimitReader: truncating reaches the decoder as "unexpected EOF"
+	// and reports a body the client sent correctly as malformed. The nil writer
+	// only costs the early connection close.
+	dec := json.NewDecoder(http.MaxBytesReader(nil, r.Body, maxBodySize))
 	dec.DisallowUnknownFields()
+
+	var tooLarge *http.MaxBytesError
 
 	switch err := dec.Decode(v); {
 	case errors.Is(err, io.EOF):
 		return Errorf(http.StatusBadRequest, "invalid_body", "request body is empty")
+	case errors.As(err, &tooLarge):
+		return Errorf(http.StatusRequestEntityTooLarge, "body_too_large",
+			"request body must be at most %d bytes", maxBodySize)
 	case err != nil:
 		return Errorf(http.StatusBadRequest, "invalid_body", "%s", err)
 	}

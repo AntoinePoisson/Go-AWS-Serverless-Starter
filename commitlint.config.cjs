@@ -1,8 +1,6 @@
-// Read by commitlint through the commit-msg hook; nothing imports it.
-//
 // The type list below and the changelog-sections of the Release Please config
-// are the same list. Letting them drift means a commit that lints locally and
-// then vanishes from the changelog, which is the worst of both.
+// are the same list: letting them drift means a commit that lints locally and
+// then vanishes from the changelog.
 module.exports = {
   extends: ['@commitlint/config-conventional'],
   rules: {

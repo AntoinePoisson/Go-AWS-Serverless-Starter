@@ -18,8 +18,6 @@ tasks:
           go build -o "bin/host/$name" "./lambda/$name"
         done
 
-  # A `task build:one` call from the shell would need the binary on the PATH,
-  # which the Makefile does not guarantee: it falls back to `go run`.
   dist:
     desc: Build and package every function for Lambda into bin/dist
     cmds:

@@ -26,8 +26,8 @@ func Recover(next http.Handler) http.Handler {
 				"stack", string(debug.Stack()),
 			)
 
-			// The handler already started answering, so appending an error
-			// document would only corrupt what the client is reading.
+			// Appending an error document to a started response would only
+			// corrupt what the client is reading.
 			if rw.written {
 				return
 			}

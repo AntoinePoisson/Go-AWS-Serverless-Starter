@@ -1,14 +1,9 @@
-// Package docs carries the OpenAPI general information and nothing else. It
-// declares no Go symbol and no package imports it.
+// Package docs carries the OpenAPI general information and nothing else: it
+// declares no Go symbol and no package imports it. Run `make docs` after
+// touching an annotation.
 //
-// swag reads the annotations below, plus the ones on each handler method, and
-// writes docs/openapi.yaml — the file Redocly renders and the one reviewers
-// read. Regenerate with `make docs` after touching any annotation.
-//
-// It lives outside lambda/api and lambda/public on purpose. `swag init -g`
-// accepts exactly one general-information file, and putting the title of the
-// whole service inside one of the two binaries would make that choice arbitrary
-// and the other function a second-class citizen of its own documentation.
+// It sits outside both functions because `swag init -g` accepts exactly one
+// general-information file, and neither binary owns the title of the service.
 package docs
 
 //	@title			bootstrap-go-aws API
@@ -37,10 +32,9 @@ package docs
 //	@servers.variables.default	apiId	xxxxxxxxxx
 //	@servers.variables.default	region	eu-west-1
 //
-// The tags come BEFORE @securityDefinitions, and the order is load-bearing:
-// the @description that belongs to the security scheme swallows every
-// annotation that follows it, so tags declared after it vanish from the
-// generated document without a word of warning.
+// The tags must come BEFORE @securityDefinitions: its description swallows
+// every annotation that follows, and anything declared after it vanishes from
+// the generated document without a warning.
 //
 //	@tag.name					items
 //	@tag.description			Authenticated CRUD over the item resource.
@@ -54,16 +48,9 @@ package docs
 //	@name						X-Api-Key
 //	@description				Shared secret. Deployed stages read it from SSM Parameter Store.
 //
-// The version above is the version of the API contract, not the version of a
-// release: Release Please tags the repository and never touches this file. Bump
-// it by hand when a change breaks a consumer.
+// The version above is the API contract, not a release: Release Please tags the
+// repository and never touches this file. Bump it when a change breaks a
+// consumer.
 //
-// The host, basePath and schemes annotations are deprecated in OpenAPI 3.1 and
-// are replaced by the servers entries above. Do not open a prose line with an
-// at-sign: the swaggo formatter reads it as an annotation and indents it into
-// the block above. The two local servers are separate because the two functions
-// listen on separate ports during development; once deployed they share one API
-// Gateway domain.
-//
-// No @license is declared: the licence is a decision of the project built from
-// this template, and claiming one here would be a claim nobody made.
+// Never open a prose line with an at-sign - the swaggo formatter reads it as an
+// annotation and folds it into the block above.

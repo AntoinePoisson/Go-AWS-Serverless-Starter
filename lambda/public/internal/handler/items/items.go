@@ -23,9 +23,8 @@ func New(items item.ServiceAPI) *Handler {
 	return &Handler{items: items}
 }
 
-// AddRoutes registers the read-only item routes. They are namespaced under
-// /public so they do not collide with the routes of the api function, which is
-// served by the same API Gateway.
+// AddRoutes registers the read-only item routes, namespaced under /public so
+// they do not collide with the api function behind the same API Gateway.
 func (h *Handler) AddRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /public/items/{id}", httpx.Handle(h.get))
 }

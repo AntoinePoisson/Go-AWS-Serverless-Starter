@@ -46,6 +46,7 @@ func TestServiceCreateRejectsInvalidInput(t *testing.T) {
 		{name: "empty name", input: item.CreateInput{Name: ""}},
 		{name: "blank name", input: item.CreateInput{Name: "   "}},
 		{name: "name too long", input: item.CreateInput{Name: strings.Repeat("a", 201)}},
+		{name: "name too long in runes", input: item.CreateInput{Name: strings.Repeat("é", 201)}},
 		{name: "too many tags", input: item.CreateInput{Name: "demo", Tags: make([]string, 21)}},
 	}
 
@@ -59,6 +60,20 @@ func TestServiceCreateRejectsInvalidInput(t *testing.T) {
 			assert.ErrorIs(t, err, item.ErrInvalidInput)
 		})
 	}
+}
+
+func TestServiceCreateMeasuresTheNameInRunes(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	repo := mock_item.NewMockRepository(ctrl)
+
+	repo.EXPECT().Put(gomock.Any(), gomock.Any()).Return(nil)
+
+	name := strings.Repeat("é", 200) // 200 characters, 400 bytes
+
+	created, err := item.NewService(repo).Create(t.Context(), item.CreateInput{Name: name})
+	require.NoError(t, err)
+
+	assert.Equal(t, name, created.Name)
 }
 
 func TestServiceCreatePropagatesRepositoryError(t *testing.T) {

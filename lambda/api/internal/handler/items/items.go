@@ -32,8 +32,8 @@ func (h *Handler) AddRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("DELETE /items/{id}", httpx.Handle(h.delete))
 }
 
-// ListResponse is the body returned by GET /items. It is exported so the
-// generated specification names the schema after it.
+// ListResponse is the body returned by GET /items. Exported so the generated
+// specification names the schema after it.
 type ListResponse struct {
 	Items []item.Item `json:"items"`
 	Count int         `json:"count"`
@@ -52,6 +52,7 @@ type ListResponse struct {
 //	@Header			201		{string}	Location	"Path of the created item"
 //	@Failure		400		{object}	httpx.Error	"invalid_body or invalid_input"
 //	@Failure		401		{object}	httpx.Error	"unauthorized"
+//	@Failure		413		{object}	httpx.Error	"body_too_large, over 1 MiB"
 //	@Failure		500		{object}	httpx.Error	"internal_error"
 //	@Security		ApiKeyAuth
 //	@Router			/items [post]

@@ -9,6 +9,6 @@ tableDeletionPolicy: Delete
 corsOrigins:
   - "*"
 
-# Read from SSM. Set DEPLOY_API_KEY to override, which also lets `make package`
-# render the template without AWS credentials.
+# Read from SSM. DEPLOY_API_KEY overrides it, which is what lets `make package`
+# render without AWS credentials.
 apiKey: ${env:DEPLOY_API_KEY, ssm:/${self:service}/alpha/api-key}

@@ -102,7 +102,7 @@ type recorder struct {
 func (r *recorder) Header() http.Header { return r.header }
 
 // Write mirrors net/http and infers the content type from the first bytes when
-// the handler did not set one, which also decides how the body is encoded.
+// the handler set none, which also decides how the body is encoded.
 func (r *recorder) Write(b []byte) (int, error) {
 	if r.header.Get("Content-Type") == "" {
 		r.header.Set("Content-Type", http.DetectContentType(b))
@@ -149,7 +149,7 @@ func (r *recorder) response() events.APIGatewayV2HTTPResponse {
 }
 
 // isTextual reports whether a content type survives being carried as a plain
-// string. Anything else has to be base64 encoded for API Gateway.
+// string. Anything else has to reach API Gateway base64 encoded.
 func isTextual(contentType string) bool {
 	mediaType, _, err := mime.ParseMediaType(contentType)
 	if err != nil {

@@ -30,7 +30,7 @@ func Load() (*Config, error) {
 	return &c, nil
 }
 
-// SetupLogging installs a JSON slog handler using the configured level. Each
+// SetupLogging installs a JSON slog handler at the configured level. Each
 // decorator wraps the handler built so far, which is how the request identifier
 // reaches every record without config knowing anything about HTTP.
 func (c *Config) SetupLogging(decorators ...func(slog.Handler) slog.Handler) {

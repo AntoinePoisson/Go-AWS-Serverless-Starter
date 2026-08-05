@@ -2,10 +2,10 @@
 #
 # Turns the template into your own project.
 #
-# The identity of this template is two strings: the Go module path and the
-# service name. Everything else — the stack name, the table name, the SSM path,
-# every Go import — is derived from them. This script rewrites both across the
-# tracked files, then sets the development environment up.
+# Its identity is two strings, the Go module path and the service name;
+# everything else - stack name, table name, SSM path, every import - derives
+# from them. This rewrites both across the tracked files, then sets the
+# development environment up.
 #
 # Usage: ./initialize.sh [--module PATH] [--service NAME]
 #        make init
@@ -100,8 +100,7 @@ while [ $# -gt 0 ]; do
 done
 
 # --------------------------------------------------------------------------
-# Current identity, read from the files rather than hardcoded, so the script
-# stays correct after it has run once.
+# Read from the files, not hardcoded, so this stays correct once it has run.
 # --------------------------------------------------------------------------
 
 current_module=$(awk '/^module /{print $2; exit}' go.mod)
@@ -124,8 +123,7 @@ fi
 sed_pattern() { printf '%s' "$1" | sed -e 's/[]\/$*.^|[]/\\&/g'; }
 sed_replacement() { printf '%s' "$1" | sed -e 's/[\/&|]/\\&/g'; }
 
-# Rewrites a string in every tracked file that contains it, plus .env, which is
-# git-ignored but holds the table name.
+# Every tracked file, plus .env: git-ignored but it holds the table name.
 replace_everywhere() {
 	local from=$1 to=$2 expr file
 	expr="s|$(sed_pattern "$from")|$(sed_replacement "$to")|g"
@@ -160,8 +158,8 @@ if [ "$DO_RENAME" = true ]; then
 		SERVICE=${SERVICE:-$default_service}
 	fi
 
-	# CloudFormation stack names, Lambda function names and npm package names
-	# all accept this shape; anything else fails at deployment time.
+	# The shape CloudFormation, Lambda and npm all accept; anything else fails
+	# at deployment time.
 	case "$SERVICE" in
 	"" | [!a-z]* | *[!a-z0-9-]*)
 		die "service name must be lowercase letters, digits and dashes, starting with a letter: '$SERVICE'"
@@ -177,8 +175,7 @@ if [ "$DO_RENAME" = true ]; then
 		info "service $current_service -> $SERVICE"
 		printf '\n'
 
-		# The module path contains the service name, so it has to go first:
-		# the reverse order would mangle it.
+		# The module path contains the service name, so it goes first.
 		[ "$MODULE" != "$current_module" ] && replace_everywhere "$current_module" "$MODULE"
 		[ "$SERVICE" != "$current_service" ] && replace_everywhere "$current_service" "$SERVICE"
 	fi
@@ -187,10 +184,9 @@ fi
 # --------------------------------------------------------------------------
 # Version history
 #
-# Two things would otherwise carry the template's past into the new project:
-# the manifests, which hold whatever version the template reached, and
-# bootstrap-sha, without which the first Release Please run walks the entire
-# history and writes a changelog describing a project nobody wrote.
+# Without this the manifests keep whatever version the template reached, and
+# the first Release Please run walks the whole history to write a changelog
+# describing a project nobody wrote.
 # --------------------------------------------------------------------------
 
 reset_releases() {
@@ -243,8 +239,8 @@ if [ "$DO_SETUP" = true ]; then
 	step "Resolving the Go dependencies"
 	go mod tidy
 
-	# The `prepare` script of package.json installs the lefthook hooks as part
-	# of this, which is why it comes before anything that would want them.
+	# The `prepare` script installs the lefthook hooks as part of this, hence
+	# the order.
 	step "Installing the Node tooling"
 	npm install --silent
 	info "serverless, lefthook, commitlint, redocly"
@@ -260,9 +256,8 @@ if [ "$DO_SETUP" = true ]; then
 	step "Installing the end-to-end test dependencies"
 	npm install --silent --prefix e2e
 
-	# The rename rewrote the title in docs/openapi.go, and docs/openapi.yaml is
-	# generated from it. Regenerating here is what keeps `make docs-check` green
-	# on the very first commit.
+	# The rename rewrote the title in docs/openapi.go; regenerating here is what
+	# keeps `make docs-check` green on the very first commit.
 	if [ "$DO_RENAME" = true ] && [ -f docs/openapi.go ]; then
 		step "Regenerating the OpenAPI specification"
 		go tool swag init --v3.1 -ot yaml --parseInternal \
@@ -274,7 +269,7 @@ if [ "$DO_SETUP" = true ]; then
 	fi
 
 	# The first pre-commit hook would otherwise build the ~200 modules
-	# golangci-lint brings in, and look exactly like a hang.
+	# golangci-lint brings in, and look like a hang.
 	step "Warming the tool caches"
 	go tool golangci-lint --version >/dev/null 2>&1 || warn "golangci-lint could not be built"
 	go build ./... >/dev/null

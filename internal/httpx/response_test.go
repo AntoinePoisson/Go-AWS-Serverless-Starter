@@ -37,15 +37,22 @@ func TestDecodeJSON(t *testing.T) {
 	}
 
 	cases := []struct {
-		name    string
-		body    string
-		wantErr bool
+		name       string
+		body       string
+		wantStatus int
+		wantCode   string
 	}{
 		{name: "valid", body: `{"name":"demo"}`},
-		{name: "empty body", body: ``, wantErr: true},
-		{name: "malformed", body: `{"name":`, wantErr: true},
-		{name: "unknown field", body: `{"name":"demo","extra":1}`, wantErr: true},
-		{name: "trailing value", body: `{"name":"demo"}{"name":"other"}`, wantErr: true},
+		{name: "empty body", body: ``, wantStatus: http.StatusBadRequest, wantCode: "invalid_body"},
+		{name: "malformed", body: `{"name":`, wantStatus: http.StatusBadRequest, wantCode: "invalid_body"},
+		{name: "unknown field", body: `{"name":"demo","extra":1}`, wantStatus: http.StatusBadRequest, wantCode: "invalid_body"},
+		{name: "trailing value", body: `{"name":"demo"}{"name":"other"}`, wantStatus: http.StatusBadRequest, wantCode: "invalid_body"},
+		{
+			name:       "body over the limit",
+			body:       `{"name":"` + strings.Repeat("a", 1<<20) + `"}`,
+			wantStatus: http.StatusRequestEntityTooLarge,
+			wantCode:   "body_too_large",
+		},
 	}
 
 	for _, c := range cases {
@@ -55,10 +62,11 @@ func TestDecodeJSON(t *testing.T) {
 			var got payload
 			err := httpx.DecodeJSON(req, &got)
 
-			if c.wantErr {
+			if c.wantStatus != 0 {
 				var httpErr *httpx.Error
 				require.ErrorAs(t, err, &httpErr)
-				assert.Equal(t, http.StatusBadRequest, httpErr.Status)
+				assert.Equal(t, c.wantStatus, httpErr.Status)
+				assert.Equal(t, c.wantCode, httpErr.Code)
 				return
 			}
 

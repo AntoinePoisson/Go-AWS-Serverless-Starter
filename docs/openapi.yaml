@@ -179,6 +179,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/httpx.Error'
           description: unauthorized
+        "413":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/httpx.Error'
+          description: body_too_large, over 1 MiB
         "500":
           content:
             application/json:

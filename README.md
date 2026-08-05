@@ -1,5 +1,10 @@
 # bootstrap-go-aws
 
+[![CI](../../actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml)
+![Go](https://img.shields.io/badge/go-1.25-00ADD8?logo=go&logoColor=white)
+![Coverage](https://img.shields.io/badge/coverage-%E2%89%A580%25-brightgreen)
+![Runtime](https://img.shields.io/badge/lambda-provided.al2023%20%C2%B7%20arm64-FF9900?logo=awslambda&logoColor=white)
+
 A serverless API in Go you can deploy on the first day and still trust on the
 hundredth: API Gateway HTTP API, two Lambda functions, one DynamoDB table.
 
@@ -72,6 +77,32 @@ Every route carries swag annotations; run `make docs` after touching one and
 commit `docs/openapi.yaml` with the change. A route also lives in
 `serverless/function-*.js` — the `infra` CI job catches what the two disagree
 on.
+
+## Quality gates
+
+Eight checks run on every pull request and a red one stops the deploy on every
+stage; a ninth guards the generated files in a pre-push hook. Most of them also
+run locally, before the code leaves the machine.
+
+| Check | What it enforces | Runs on |
+| ----- | ---------------- | ------- |
+| Formatting | `golangci-lint fmt --diff`, reported not rewritten | commit, CI |
+| Lint | 13 linters on top of the standard set; `godox` on protected branches | commit, CI |
+| Vulnerabilities | `govulncheck`, limited to symbols this code reaches | CI |
+| Unit tests | race detector on, **80% coverage floor** | push, CI |
+| Integration | the repository against a real DynamoDB | CI |
+| End-to-end | Playwright against both functions, wired to DynamoDB | CI |
+| API drift | the specification is regenerated and diffed | push, CI |
+| Codegen drift | Wire injectors and mocks regenerated and diffed | push |
+| Infrastructure | all three stages rendered to CloudFormation | CI |
+
+Coverage is measured with `-coverpkg`, so a package covered by another
+package's tests counts, and excludes generated files and the two `main()`.
+Below 80% the job fails rather than warns.
+
+Deployments authenticate through OIDC, each function carries its own IAM role,
+and the artifacts that ship are the very zips the checks ran against — never a
+rebuild.
 
 ## Layout
 
