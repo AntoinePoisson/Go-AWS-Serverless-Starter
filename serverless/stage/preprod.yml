@@ -3,6 +3,9 @@ logLevel: info
 logRetentionInDays: 14
 pointInTimeRecovery: true
 
+# Between the two: a release is rehearsed here, a handful of 5xx is a finding.
+api5xxThreshold: 5
+
 # Mirrors prod so a release is rehearsed under the same constraints.
 tableDeletionPolicy: Retain
 

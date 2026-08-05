@@ -3,6 +3,9 @@ logLevel: info
 logRetentionInDays: 30
 pointInTimeRecovery: true
 
+# One is enough: in production a server error is a bug someone must see.
+api5xxThreshold: 1
+
 # Kept when the stack is deleted, so `serverless remove` cannot drop the data.
 tableDeletionPolicy: Retain
 

@@ -3,6 +3,9 @@ logLevel: debug
 logRetentionInDays: 7
 pointInTimeRecovery: false
 
+# Loose: a throwaway stage is where broken code is expected to be found.
+api5xxThreshold: 10
+
 # Dropped with the stack, so the stage leaves nothing behind.
 tableDeletionPolicy: Delete
 
