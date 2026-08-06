@@ -1,0 +1,36 @@
+version: "3"
+
+tasks:
+  default:
+    cmds:
+      - task --list
+    silent: true
+
+  tidy:
+    desc: Sync go.mod and go.sum
+    cmds:
+      - go mod tidy
+
+  fmt:
+    desc: Format the Go sources
+    cmds:
+      - go tool golangci-lint fmt
+
+  lint:
+    # govet and staticcheck are part of the linter set in .golangci.yml, so
+    # there is nothing left for a separate `go vet` step to catch.
+    desc: Run golangci-lint
+    cmds:
+      - go tool golangci-lint run ./...
+
+  test:
+    desc: Run the unit tests with coverage
+    cmds:
+      - mkdir -p .coverage
+      - go test -race -coverprofile=.coverage/report.out ./...
+
+  coverage:
+    desc: Open the coverage report in a browser
+    deps: [test]
+    cmds:
+      - go tool cover -html=.coverage/report.out
