@@ -65,8 +65,18 @@ pre-commit:
           fail=1
         }
 
+        # True when the staged diff touches anything but comments and blank
+        # lines. mockgen copies neither, so a reworded comment leaves the mock
+        # byte for byte identical and there is nothing to stage.
+        touches_code() {
+          git diff --cached -U0 -- "$1" |
+            grep -E '^[+-]' | grep -vE '^(\+\+\+|---)' |
+            grep -qvE '^[+-][[:space:]]*(//.*)?$'
+        }
+
         # an interface changed but its mock did not. same scope as `make mocks`
         for f in $(printf '%s\n' "$staged" | grep -E '^(internal|lambda)/.*api\.go$' | grep -v '/mock_' || true); do
+          touches_code "$f" || continue
           dir=$(dirname "$f")
           mock="$dir/mock_$(basename "$dir")/mock$(basename "$f")"
           printf '%s\n' "$staged" | grep -qxF "$mock" || note "$f is staged, $mock is not - run 'make mocks'"
