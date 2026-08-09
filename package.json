@@ -9,7 +9,7 @@
   },
   "devDependencies": {
     "@commitlint/config-conventional": "^21.2.0",
-    "@redocly/cli": "^2.44.1",
+    "@redocly/cli": "^2.45.0",
     "commitlint": "^21.2.1",
     "lefthook": "^2.1.10",
     "serverless": "^3.40.0",
