@@ -29,8 +29,8 @@ func (h *Handler) AddRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /health", h.get)
 }
 
-// Response is the body returned by GET /health. Exported so the generated
-// specification names the schema after it.
+// Response is the body of GET /health. Exported so the generated schema is
+// named after it.
 type Response struct {
 	Status  string `json:"status"`
 	Stage   string `json:"stage"`

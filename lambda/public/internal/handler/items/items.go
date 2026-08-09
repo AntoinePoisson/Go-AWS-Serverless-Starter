@@ -18,18 +18,18 @@ type Handler struct {
 	items item.ServiceAPI
 }
 
-// New returns a Handler backed by the given service.
+// New returns a Handler over the item service.
 func New(items item.ServiceAPI) *Handler {
 	return &Handler{items: items}
 }
 
-// AddRoutes registers the read-only item routes, namespaced under /public so
-// they do not collide with the api function behind the same API Gateway.
+// AddRoutes registers the read-only routes. They sit under /public so they do
+// not collide with the api function behind the same API Gateway.
 func (h *Handler) AddRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /public/items/{id}", httpx.Handle(h.get))
 }
 
-// get returns a single item without requiring an API key.
+// get reads one item, no key needed.
 //
 //	@Id				getPublicItem
 //	@Summary		Read an item, unauthenticated

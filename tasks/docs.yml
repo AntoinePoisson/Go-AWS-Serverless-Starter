@@ -1,8 +1,8 @@
 version: "3"
 
 vars:
-  # The first directory must hold the -g file: swag resolves it relatively to
-  # that one, not to the working directory.
+  # The first directory has to hold the -g file, swag resolves it relative to
+  # that one and not to the working directory.
   SWAG_DIRS: ./docs,./lambda/api/internal/handler/items,./lambda/public/internal/handler/health,./lambda/public/internal/handler/items,./internal/item,./internal/httpx
 
 tasks:
@@ -16,11 +16,11 @@ tasks:
     generates:
       - docs/openapi.yaml
     cmds:
-      # --parseInternal is mandatory: every type this API returns lives under
-      # internal/, and without it swag emits no schemas at all and no error.
-      # --parseDependency would pull AWS SDK schemas in for nothing.
+      # --parseInternal is mandatory, every type we return lives under internal/
+      # and without it swag emits no schema and no error either. Dont add
+      # --parseDependency, it pulls in the AWS SDK for nothing.
       - go tool swag init --v3.1 -ot yaml --parseInternal -g openapi.go -d {{.SWAG_DIRS}} -o docs
-      # swag writes swagger.yaml whatever the specification version.
+      # swag writes swagger.yaml whatever the spec version
       - mv docs/swagger.yaml docs/openapi.yaml
 
   lint:

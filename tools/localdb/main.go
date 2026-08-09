@@ -1,4 +1,4 @@
-// Command localdb creates the items table in a local DynamoDB instance.
+// Command localdb creates the items table in a local DynamoDB.
 package main
 
 import (

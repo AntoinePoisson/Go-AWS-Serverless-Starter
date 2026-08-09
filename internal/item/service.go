@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	maxNameLength = 200 // runes, not bytes: accents must not halve the limit
+	maxNameLength = 200 // runes and not bytes, accents shouldnt halve the limit
 	maxTags       = 20
 	defaultLimit  = 25
 	maxLimit      = 100
@@ -34,7 +34,7 @@ type CreateInput struct {
 	Metadata map[string]string `json:"metadata"`
 }
 
-// Service implements the item use cases on top of a Repository.
+// Service implements the item use cases over a Repository.
 type Service struct {
 	repo  Repository
 	now   func() time.Time
@@ -91,7 +91,7 @@ func (s *Service) Delete(ctx context.Context, id string) error {
 	return s.repo.Delete(ctx, id)
 }
 
-// List returns up to limit items. A limit outside [1, 100] falls back to 25.
+// List returns up to limit items. Anything outside [1, 100] falls back to 25.
 func (s *Service) List(ctx context.Context, limit int32) ([]Item, error) {
 	if limit <= 0 || limit > maxLimit {
 		limit = defaultLimit

@@ -2,10 +2,9 @@
 #
 # Turns the template into your own project.
 #
-# Its identity is two strings, the Go module path and the service name;
-# everything else - stack name, table name, SSM path, every import - derives
-# from them. This rewrites both across the tracked files, then sets the
-# development environment up.
+# The identity of this repo is two strings, the Go module path and the service
+# name. Stack name, table name, SSM path and every import derive from them. We
+# rewrite both across the tracked files, then set the environment up.
 #
 # Usage: ./initialize.sh [--module PATH] [--service NAME]
 #        make init
@@ -19,10 +18,6 @@ SERVICE=""
 DO_RENAME=true
 DO_SETUP=true
 DO_RESET_RELEASES=ask
-
-# --------------------------------------------------------------------------
-# Output helpers
-# --------------------------------------------------------------------------
 
 if [ -t 1 ]; then
 	BOLD=$(printf '\033[1m') DIM=$(printf '\033[2m') RESET=$(printf '\033[0m')
@@ -61,10 +56,6 @@ resets the version history.
 EOF
 }
 
-# --------------------------------------------------------------------------
-# Arguments
-# --------------------------------------------------------------------------
-
 while [ $# -gt 0 ]; do
 	case "$1" in
 	-m | --module)
@@ -99,21 +90,14 @@ while [ $# -gt 0 ]; do
 	esac
 done
 
-# --------------------------------------------------------------------------
-# Read from the files, not hardcoded, so this stays correct once it has run.
-# --------------------------------------------------------------------------
-
+# read from the files and not hardcoded, so this stays correct once it has run
 current_module=$(awk '/^module /{print $2; exit}' go.mod)
 current_service=$(awk -F'[ \t]*:[ \t]*' '/^service:/{print $2; exit}' serverless.yml)
 
 [ -n "$current_module" ] || die "no module directive in go.mod"
 [ -n "$current_service" ] || die "no service key in serverless.yml"
 
-# --------------------------------------------------------------------------
-# Rename
-# --------------------------------------------------------------------------
-
-# GNU sed wants -i, BSD sed wants -i ''.
+# GNU sed wants -i, BSD sed wants -i ''
 if sed --version >/dev/null 2>&1; then
 	sed_inplace() { sed -i "$@"; }
 else
@@ -123,7 +107,7 @@ fi
 sed_pattern() { printf '%s' "$1" | sed -e 's/[]\/$*.^|[]/\\&/g'; }
 sed_replacement() { printf '%s' "$1" | sed -e 's/[\/&|]/\\&/g'; }
 
-# Every tracked file, plus .env: git-ignored but it holds the table name.
+# every tracked file, plus .env which is ignored but holds the table name
 replace_everywhere() {
 	local from=$1 to=$2 expr file
 	expr="s|$(sed_pattern "$from")|$(sed_replacement "$to")|g"
@@ -158,8 +142,8 @@ if [ "$DO_RENAME" = true ]; then
 		SERVICE=${SERVICE:-$default_service}
 	fi
 
-	# The shape CloudFormation, Lambda and npm all accept; anything else fails
-	# at deployment time.
+	# what CloudFormation, Lambda and npm all accept. anything else blows up at
+	# deploy time
 	case "$SERVICE" in
 	"" | [!a-z]* | *[!a-z0-9-]*)
 		die "service name must be lowercase letters, digits and dashes, starting with a letter: '$SERVICE'"
@@ -175,20 +159,14 @@ if [ "$DO_RENAME" = true ]; then
 		info "service $current_service -> $SERVICE"
 		printf '\n'
 
-		# The module path contains the service name, so it goes first.
+		# the module path contains the service name, so it goes first
 		[ "$MODULE" != "$current_module" ] && replace_everywhere "$current_module" "$MODULE"
 		[ "$SERVICE" != "$current_service" ] && replace_everywhere "$current_service" "$SERVICE"
 	fi
 fi
 
-# --------------------------------------------------------------------------
-# Version history
-#
 # Without this the manifests keep whatever version the template reached, and
-# the first Release Please run walks the whole history to write a changelog
-# describing a project nobody wrote.
-# --------------------------------------------------------------------------
-
+# the first Release Please run writes a changelog for a project nobody wrote.
 reset_releases() {
 	step "Resetting the version history"
 
@@ -228,10 +206,6 @@ if [ "$DO_RENAME" = true ] && [ -f .release-please-config.json ]; then
 	[ "$DO_RESET_RELEASES" = true ] && reset_releases
 fi
 
-# --------------------------------------------------------------------------
-# Environment
-# --------------------------------------------------------------------------
-
 if [ "$DO_SETUP" = true ]; then
 	command -v go >/dev/null || die "go is not installed"
 	command -v npm >/dev/null || die "npm is not installed"
@@ -239,8 +213,7 @@ if [ "$DO_SETUP" = true ]; then
 	step "Resolving the Go dependencies"
 	go mod tidy
 
-	# The `prepare` script installs the lefthook hooks as part of this, hence
-	# the order.
+	# the `prepare` script installs the hooks as part of this, hence the order
 	step "Installing the Node tooling"
 	npm install --silent
 	info "serverless, lefthook, commitlint, redocly"
@@ -250,14 +223,14 @@ if [ "$DO_SETUP" = true ]; then
 		npx --no-install lefthook install >/dev/null
 		info "pre-commit, pre-push and commit-msg installed"
 	else
-		warn "not a git repository, hooks skipped — run 'npx lefthook install' after 'git init'"
+		warn "not a git repository, hooks skipped - run 'npx lefthook install' after 'git init'"
 	fi
 
 	step "Installing the end-to-end test dependencies"
 	npm install --silent --prefix e2e
 
-	# The rename rewrote the title in docs/openapi.go; regenerating here is what
-	# keeps `make docs-check` green on the very first commit.
+	# the rename touched the title in docs/openapi.go, so regenerate or the
+	# first commit fails docs-check
 	if [ "$DO_RENAME" = true ] && [ -f docs/openapi.go ]; then
 		step "Regenerating the OpenAPI specification"
 		go tool swag init --v3.1 -ot yaml --parseInternal \
@@ -268,8 +241,8 @@ if [ "$DO_SETUP" = true ]; then
 		info "docs/openapi.yaml"
 	fi
 
-	# The first pre-commit hook would otherwise build the ~200 modules
-	# golangci-lint brings in, and look like a hang.
+	# otherwise the first pre-commit builds the ~200 modules golangci-lint
+	# pulls in and looks like a hang
 	step "Warming the tool caches"
 	go tool golangci-lint --version >/dev/null 2>&1 || warn "golangci-lint could not be built"
 	go build ./... >/dev/null
@@ -285,7 +258,7 @@ if [ "$DO_SETUP" = true ]; then
 
 	step "Starting DynamoDB Local"
 	if ! command -v docker >/dev/null; then
-		warn "docker is not installed, skipping — run 'make db' once it is"
+		warn "docker is not installed, skipping - run 'make db' once it is"
 	elif ! docker compose up -d; then
 		warn "could not start DynamoDB Local, run 'make db' once docker is up"
 	else

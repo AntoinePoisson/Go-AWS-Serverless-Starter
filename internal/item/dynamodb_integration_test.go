@@ -59,7 +59,7 @@ func createTable(t *testing.T, client *dynamodb.Client) {
 
 	var inUse *types.ResourceInUseException
 	if err != nil && !errors.As(err, &inUse) {
-		require.NoError(t, err, "DynamoDB Local must be reachable, run: make local-db")
+		require.NoError(t, err, "DynamoDB Local must be reachable, run: make db")
 	}
 
 	t.Cleanup(func() {

@@ -3,15 +3,14 @@ logLevel: debug
 logRetentionInDays: 7
 pointInTimeRecovery: false
 
-# Loose: a throwaway stage is where broken code is expected to be found.
+# loose, this is where broken code is expected to show up
 api5xxThreshold: 10
 
-# Dropped with the stack, so the stage leaves nothing behind.
 tableDeletionPolicy: Delete
 
 corsOrigins:
   - "*"
 
-# Read from SSM. DEPLOY_API_KEY overrides it, which is what lets `make package`
-# render without AWS credentials.
+# From SSM. DEPLOY_API_KEY overrides it so `make package` can render without
+# AWS credentials.
 apiKey: ${env:DEPLOY_API_KEY, ssm:/${self:service}/alpha/api-key}

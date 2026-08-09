@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    # One branch per stage: dev -> alpha, main -> preprod, prod -> prod.
+    # dev -> alpha, main -> preprod, prod -> prod
     branches: [dev, main, prod]
   pull_request:
   workflow_dispatch:
@@ -13,25 +13,16 @@ on:
         options: [alpha, preprod, prod]
         default: alpha
 
-# Read-only by default (least privilege). Only the deploy job widens this, and
-# only for OIDC.
 permissions:
   contents: read
 
-# Only a pull_request run is disposable. Every push to dev, main or prod may
-# deploy, and cancelling one mid-`serverless deploy` leaves the stack in
-# UPDATE_IN_PROGRESS - a state nothing but a human gets it out of.
-#
-# This used to read `!= 'workflow_dispatch'`, which was correct only while
-# workflow_dispatch was the sole path to a deployment.
+# Only PR runs are cancellable. Killing a push mid-deploy leaves the stack in
+# UPDATE_IN_PROGRESS and only a human gets it out of there.
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.head_ref || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  # ============================================================
-  # LINT - Formatting and static analysis
-  # ============================================================
   lint:
     name: Lint
     runs-on: ubuntu-latest
@@ -40,18 +31,15 @@ jobs:
       - name: Check out the repository
         uses: actions/checkout@v7
 
-      # setup-go v6 and later pin GOTOOLCHAIN=local, so the toolchain is exactly
-      # the one the `go` directive of go.mod asks for - no silent upgrade at the
-      # first build. That directive therefore carries a full patch version, and
-      # bumping it is how the standard library gets its security fixes.
+      # setup-go pins GOTOOLCHAIN=local, so this is exactly the version the `go`
+      # directive asks for. Bumping it is how we pick up stdlib security fixes.
       - name: Set up Go
         uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
           cache: true
 
-      # `fmt --diff` reports instead of rewriting: a CI job that fixes the tree
-      # it is judging would pass on a commit nobody can reproduce locally.
+      # --diff, so CI never rewrites the tree it is judging
       - name: Verify the formatting
         run: |
           go tool golangci-lint fmt --diff || {
@@ -59,22 +47,14 @@ jobs:
             exit 1
           }
 
-      # govet and staticcheck are part of the linter set in .golangci.yml.
-      # godox is added here for the same reason the pre-commit hook adds it on a
-      # protected branch: an unfinished thought must not reach main.
+      # godox is off by default and turned on here, same as the pre-commit hook
+      # does on protected branches.
       - name: Run golangci-lint
         run: go tool golangci-lint run --enable=godox ./...
 
-      # gosec covers the patterns, this covers the published CVEs. It reports
-      # only the vulnerable symbols actually reachable from this code - most of
-      # them in the standard library, which makes the `go` directive of go.mod
-      # the fix for this step as much as any dependency bump.
       - name: Check the dependencies for known vulnerabilities
         run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
 
-  # ============================================================
-  # UNIT TESTS - Every package, race detector on
-  # ============================================================
   test-unit:
     name: Unit Tests
     runs-on: ubuntu-latest
@@ -89,16 +69,14 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      # -coverpkg, as in tasks: most of the handler code is covered from another
-      # package's tests, and without it those statements count as untested.
+      # -coverpkg: most of the handler code is covered from another package's
+      # tests and would count as untested without it.
       - name: Run the unit tests with the race detector and coverage
         run: |
           mkdir -p .coverage
           go test -race -coverpkg=./... -coverprofile=.coverage/report.out ./...
 
-      # Mirrors `make cover`, inlined so the workflow needs nothing but Go.
-      # Generated injectors, generated mocks and every main() are dropped before
-      # the number is computed - see the task for why.
+      # same as `make cover`, inlined so this job needs nothing but Go
       - name: Enforce the coverage floor
         run: |
           grep -v -e 'wire_gen\.go:' -e '/mock_' -e '/main\.go:' \
@@ -119,9 +97,6 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
 
-  # ============================================================
-  # INTEGRATION TESTS - Repository against DynamoDB Local
-  # ============================================================
   test-integration:
     name: Integration Tests
     runs-on: ubuntu-latest
@@ -146,13 +121,10 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      # The suite creates its own table, so DynamoDB Local only has to answer.
+      # the suite creates its own table
       - name: Run the repository integration tests
         run: go test -tags=integration -count=1 ./internal/item/...
 
-  # ============================================================
-  # BUILD - The artifacts every later job consumes
-  # ============================================================
   build:
     name: Build
     runs-on: ubuntu-latest
@@ -167,7 +139,7 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      # Mirrors tasks/build.yml, inlined so the workflow needs nothing but Go.
+      # mirrors tasks/build.yml
       - name: Compile both functions for Lambda (linux/arm64)
         run: |
           for dir in lambda/*/; do
@@ -191,9 +163,6 @@ jobs:
           path: bin/dist/*.zip
           retention-days: 7
 
-  # ============================================================
-  # END-TO-END TESTS - Playwright against both running functions
-  # ============================================================
   test-e2e:
     name: End-to-End Tests
     runs-on: ubuntu-latest
@@ -263,9 +232,7 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
 
-  # ============================================================
-  # API DOCUMENTATION - The specification is generated, so it can drift
-  # ============================================================
+  # The spec is generated from the annotations, so it can drift.
   openapi:
     name: API Documentation
     runs-on: ubuntu-latest
@@ -289,9 +256,7 @@ jobs:
       - name: Install the documentation tooling
         run: npm ci
 
-      # The same command `make docs` runs, inlined so the workflow needs no
-      # task binary. --parseInternal is what keeps the specification from
-      # coming out empty; see tasks/docs.yml.
+      # what `make docs` runs. --parseInternal is not optional, see tasks/docs.yml
       - name: Regenerate the specification
         run: |
           go tool swag init --v3.1 -ot yaml --parseInternal \
@@ -307,17 +272,15 @@ jobs:
             exit 1
           }
 
-      # --no-install everywhere npx runs, as in tasks/: without it a missing
-      # node_modules is answered by a silent download of the latest release
-      # rather than by an error.
+      # --no-install: bare npx silently downloads the latest release instead of
+      # failing when node_modules is missing.
       - name: Lint the specification
         run: npx --no-install redocly lint docs/openapi.yaml
 
       - name: Render the reference
         run: npx --no-install redocly build-docs docs/openapi.yaml -o docs/api.html
 
-      # Not committed - see .gitignore. Downloading the artifact is how you read
-      # the reference for a given commit.
+      # api.html is git-ignored, this is how you read it for a given commit
       - name: Upload the rendered reference
         uses: actions/upload-artifact@v7
         with:
@@ -325,9 +288,6 @@ jobs:
           path: docs/api.html
           retention-days: 7
 
-  # ============================================================
-  # INFRASTRUCTURE - Render every stage without deploying
-  # ============================================================
   infra:
     name: Infrastructure
     runs-on: ubuntu-latest
@@ -352,8 +312,7 @@ jobs:
           name: lambda-artifacts
           path: bin/dist
 
-      # Catches route collisions, unresolved variables and malformed resources
-      # before anyone tries to deploy.
+      # catches route collisions and unresolved variables before a deploy does
       - name: Render the CloudFormation template of every stage
         run: |
           for stage in alpha preprod prod; do
@@ -364,13 +323,10 @@ jobs:
         env:
           DEPLOY_API_KEY: rendered-in-ci
 
-  # ============================================================
-  # RESOLVE - Which stage, and which version to report
-  # ============================================================
+  # Which stage, and which version to report. Skipping this skips deploy with
+  # it, so a PR never reaches AWS.
   resolve:
     name: Resolve Target
-    # Skipping this job skips deploy with it, which is how a pull request and a
-    # push to an unrelated branch stop short of AWS.
     if: >-
       github.event_name == 'workflow_dispatch'
       || (github.event_name == 'push'
@@ -385,9 +341,8 @@ jobs:
       - name: Check out the repository
         uses: actions/checkout@v7
 
-      # A job rather than an inline `${{ }}` on the deploy job, because an
-      # expression has no `exit 1`: an unknown ref must fail, not default to a
-      # stage nobody chose.
+      # A job and not an inline `${{ }}` because an expression has no `exit 1`,
+      # and an unknown ref must fail instead of defaulting to some stage.
       - name: Resolve the stage and the version
         id: target
         env:
@@ -406,17 +361,12 @@ jobs:
             esac
           fi
 
-          # The version GET /health reports.
+          # The version GET /health reports. We deploy before we release, so the
+          # tag for this commit does not exist yet and `git describe` would only
+          # ever report the previous one. The manifest already holds the new
+          # version on the commit that merges a release PR.
           #
-          # "Deploy first, release after" means the tag for this commit does not
-          # exist yet, so `git describe` could only ever report the PREVIOUS tag
-          # plus a distance. The Release Please manifest does better: on the
-          # commit that merges a release pull request it already holds the new
-          # version, so the deployed value and the tag created seconds later
-          # agree exactly. On any other commit it reads "the last release, plus
-          # this commit", which is precise rather than approximate.
-          #
-          # alpha and preprod share the preprod manifest: dev is upstream of main.
+          # alpha and preprod share a manifest, dev being upstream of main.
           manifest=.release-please-manifest-preprod.json
           [ "$stage" = prod ] && manifest=.release-please-manifest-prod.json
 
@@ -428,15 +378,13 @@ jobs:
             echo "::warning::$manifest is missing, reporting $base as the base version"
           fi
 
-          # `+build` is SemVer build metadata: valid, ignored by precedence
-          # ordering, and accepted as-is in a Lambda environment variable.
+          # SemVer build metadata, ignored by precedence ordering and accepted
+          # as-is in a Lambda env var.
           version="${base}+${GITHUB_SHA::7}"
 
-          # No AWS account stands behind a fresh clone of this template, so the
-          # deployment is opt-in: without the DEPLOY_ENABLED repository variable
-          # the pipeline stops after the checks instead of failing on an empty
-          # role ARN. Resolution still runs, so the summary reports what WOULD
-          # have shipped - a skipped job explains nothing on its own.
+          # A fresh clone has no AWS account behind it, so deploying is opt-in.
+          # We still resolve, otherwise the run says nothing about what it would
+          # have shipped.
           if [ "${DEPLOY_ENABLED:-}" = "true" ]; then
             enabled=true
             echo "Deploying **$stage** as \`$version\`" >> "$GITHUB_STEP_SUMMARY"
@@ -458,25 +406,15 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "enabled=$enabled" >> "$GITHUB_OUTPUT"
 
-  # ============================================================
-  # DEPLOY - Ships the artifacts the checks ran against
-  # ============================================================
   deploy:
     name: Deploy ${{ needs.resolve.outputs.stage }}
-    # The switch `resolve` computed. Skipping here skips both release jobs with
-    # it, since each of them requires `needs.deploy.result == 'success'`.
-    #
-    # An `if:` with no status function keeps the implicit success() over every
-    # need, so this narrows the gate below and never widens it.
+    # The switch `resolve` computed. An `if:` with no status function keeps the
+    # implicit success() over every need, so this only narrows the gate below.
     if: needs.resolve.outputs.enabled == 'true'
-    # No `always()` anywhere in this job, unlike the template this pipeline is
-    # modelled on. It downloads `lambda-artifacts`, so always() would only ever
-    # unblock the "build green, tests red" case - exactly the one to forbid. A
-    # failed serverless deploy can leave the stack in UPDATE_ROLLBACK_FAILED,
-    # preprod retains its table and rehearses prod, and a green deploy on main
-    # triggers a release: none of that survives shipping known-broken code.
-    #
-    # If dev ever feels too slow, shorten its barrier - do not remove it.
+    # No always() here, ever. It would only unblock the "build green, tests red"
+    # case, which is exactly the one we don't want shipped: a failed deploy can
+    # leave the stack in UPDATE_ROLLBACK_FAILED, and a green deploy on main
+    # triggers a release. Shorten this list if dev feels slow, dont drop it.
     needs: [resolve, lint, test-unit, test-integration, openapi, build, test-e2e, infra]
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -500,7 +438,7 @@ jobs:
       - name: Install the Serverless Framework
         run: npm ci
 
-      # The very zips the checks ran against, never a fresh build.
+      # the zips the checks ran against, not a fresh build
       - name: Download the Lambda artifacts
         uses: actions/download-artifact@v8
         with:
@@ -519,25 +457,18 @@ jobs:
           STAGE: ${{ needs.resolve.outputs.stage }}
           VERSION: ${{ needs.resolve.outputs.version }}
 
-  # ============================================================
-  # RELEASE - Deploy first, release after: a tag never points at code
-  # that was never deployed
-  # ============================================================
+  # Deploy first, release after, so a tag never points at code nobody deployed.
   #
-  # Two configurations rather than one, and this is the point: both branches
-  # write a changelog, and if they wrote the SAME file they would both insert at
-  # the top of it, guaranteeing a merge conflict on every single release. main
-  # writes CHANGELOG-preprod.md, prod writes CHANGELOG.md, and the manifests are
-  # likewise per-branch, so nothing the two lines produce ever collides.
+  # Two configs and not one: both branches write a changelog and both insert at
+  # the top of it, so a shared file would conflict on every release. main writes
+  # CHANGELOG-preprod.md, prod writes CHANGELOG.md, manifests likewise.
   #
-  # Do NOT enable auto-merge on the release pull requests: a push authenticated
-  # with GITHUB_TOKEN triggers no workflow, so the tagged version would never be
-  # deployed. A human merging is what starts the pipeline that ships it.
+  # Do NOT enable auto-merge on the release PRs. A push authenticated with
+  # GITHUB_TOKEN triggers no workflow, so the tagged version would never deploy.
   release-preprod:
     name: Release Preprod
-    # `needs.deploy.result` is belt and braces - an `if:` with no status
-    # function already implies success() over every need - but it states the
-    # invariant where someone will read it.
+    # needs.deploy.result is redundant with the implicit success(), but this is
+    # where someone will look for the invariant.
     if: >-
       github.event_name == 'push'
       && github.ref_name == 'main'
@@ -552,8 +483,8 @@ jobs:
       group: release-main
       cancel-in-progress: false
     steps:
-      # Prereleases: main carries vX.Y.Z-pre.N, which SemVer orders BELOW the
-      # matching vX.Y.Z, so `go get @latest` never picks one up.
+      # main carries vX.Y.Z-pre.N, which SemVer orders below the matching
+      # vX.Y.Z, so `go get @latest` never picks one up.
       - name: Run Release Please
         uses: googleapis/release-please-action@v5
         with:

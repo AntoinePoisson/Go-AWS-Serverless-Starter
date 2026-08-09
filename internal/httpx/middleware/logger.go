@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-// Logger emits one structured line per request once the response is written.
+// Logger writes one structured line per request, after the response.
 func Logger(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()

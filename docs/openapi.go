@@ -1,9 +1,9 @@
-// Package docs carries the OpenAPI general information and nothing else: it
-// declares no Go symbol and no package imports it. Run `make docs` after
-// touching an annotation.
+// Package docs holds the OpenAPI general information and nothing else. It
+// declares no symbol and nobody imports it. Run `make docs` after touching an
+// annotation.
 //
-// It sits outside both functions because `swag init -g` accepts exactly one
-// general-information file, and neither binary owns the title of the service.
+// It lives outside both functions because `swag init -g` takes exactly one
+// general-information file.
 package docs
 
 //	@title			Go AWS Serverless Starter API
@@ -32,9 +32,8 @@ package docs
 //	@servers.variables.default	apiId	xxxxxxxxxx
 //	@servers.variables.default	region	eu-west-1
 //
-// The tags must come BEFORE @securityDefinitions: its description swallows
-// every annotation that follows, and anything declared after it vanishes from
-// the generated document without a warning.
+// Tags MUST come before @securityDefinitions. Its description swallows every
+// annotation that follows and they vanish from the output without a warning.
 //
 //	@tag.name					items
 //	@tag.description			Authenticated CRUD over the item resource.
@@ -48,9 +47,8 @@ package docs
 //	@name						X-Api-Key
 //	@description				Shared secret. Deployed stages read it from SSM Parameter Store.
 //
-// The version above is the API contract, not a release: Release Please tags the
-// repository and never touches this file. Bump it when a change breaks a
-// consumer.
+// The version above is the API contract and not a release, Release Please
+// never touches this file. Bump it when a change breaks a consumer.
 //
-// Never open a prose line with an at-sign - the swaggo formatter reads it as an
-// annotation and folds it into the block above.
+// Never start a prose line with an at-sign, the swaggo formatter takes it for
+// an annotation and folds it into the block above.

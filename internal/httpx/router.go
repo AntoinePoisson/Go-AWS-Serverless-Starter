@@ -1,5 +1,5 @@
-// Package httpx contains the HTTP plumbing shared by the functions: routing,
-// JSON responses, error rendering and the Lambda entry point.
+// Package httpx holds the HTTP plumbing shared by the functions: routing, JSON
+// responses, error rendering and the Lambda entry point.
 package httpx
 
 import "net/http"
@@ -21,7 +21,7 @@ func NewRouter(handlers ...Handler) *http.ServeMux {
 	return mux
 }
 
-// Chain wraps h with the given middlewares. The first one is the outermost.
+// Chain wraps h with the given middlewares, first one outermost.
 func Chain(h http.Handler, middlewares ...Middleware) http.Handler {
 	for i := len(middlewares) - 1; i >= 0; i-- {
 		h = middlewares[i](h)

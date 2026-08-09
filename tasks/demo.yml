@@ -1,11 +1,10 @@
-# Records the README GIF from docs/demo.tape.
-#
-# In a throwaway clone, never in place: the demo opens on `initialize.sh`, which
-# rewrites the module path and the service name of the checkout it runs in.
+# Records the README GIF from docs/demo.tape, in a throwaway clone and never in
+# place: the demo starts with initialize.sh, which rewrites the module path and
+# the service name of the checkout it runs in.
 version: "3"
 
 vars:
-  # Under bin/, which is git-ignored and what `make clean` removes.
+  # under bin/, git-ignored and removed by `make clean`
   CLONE: bin/demo
 
 tasks:
@@ -18,17 +17,17 @@ tasks:
         msg: gifsicle is not installed - `brew install gifsicle`
       - sh: docker info >/dev/null 2>&1
         msg: Docker is not running - the demo starts DynamoDB Local
-      # The clone starts its own container on the same port as yours.
+      # the clone starts its own container on the same port as yours
       - sh: "! nc -z localhost 8000"
         msg: port 8000 is taken - run `make db-stop` first
     cmds:
       - rm -rf {{ .CLONE }}
       - git clone --quiet . {{ .CLONE }}
-      # The tape from the working tree rather than from HEAD, so iterating on it
-      # does not need a commit per take.
+      # the tape from the working tree, not from HEAD, so iterating on it does
+      # not need one commit per take
       - cp docs/demo.tape {{ .CLONE }}/docs/demo.tape
       - cd {{ .CLONE }} && vhs docs/demo.tape
-      # VHS optimises for fidelity; a README wants a file people will wait for.
+      # vhs optimises for fidelity, a README wants something that loads
       - gifsicle -O3 --lossy=60 {{ .CLONE }}/docs/demo.gif -o docs/demo.gif
       - cd {{ .CLONE }} && docker compose down --volumes >/dev/null 2>&1 || true
       - rm -rf {{ .CLONE }}

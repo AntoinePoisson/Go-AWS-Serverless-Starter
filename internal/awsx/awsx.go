@@ -12,11 +12,11 @@ import (
 	"github.com/AntoinePoisson/go-aws-serverless-starter/internal/config"
 )
 
-// WireSet provides the AWS clients to the dependency graph.
+// WireSet provides the AWS clients.
 var WireSet = wire.NewSet(NewDynamoDBClient)
 
-// NewDynamoDBClient returns a DynamoDB client. When DYNAMODB_ENDPOINT is set it
-// targets that endpoint, which is how the service talks to DynamoDB Local.
+// NewDynamoDBClient returns a DynamoDB client. It targets DYNAMODB_ENDPOINT
+// when set, ie. DynamoDB Local.
 func NewDynamoDBClient(cfg *config.Config) (*dynamodb.Client, error) {
 	awsCfg, err := awsconfig.LoadDefaultConfig(context.Background())
 	if err != nil {

@@ -54,8 +54,8 @@ func TestNewHandlerServesAnAuthenticatedRequest(t *testing.T) {
 	assert.Equal(t, http.StatusOK, rec.Code)
 }
 
-// The request worth reading about is the one that crashed, and it is the one
-// the chain loses if Recover wraps Logger.
+// the request worth reading about is the one that crashed, and it is the one
+// we lose if Recover wraps Logger
 func TestNewHandlerLogsARequestThatPanics(t *testing.T) {
 	service := mock_item.NewMockServiceAPI(gomock.NewController(t))
 	service.EXPECT().List(gomock.Any(), gomock.Any()).DoAndReturn(
@@ -87,5 +87,5 @@ func TestNewHandlerLogsARequestThatPanics(t *testing.T) {
 
 	require.NotNil(t, request, "a request that panicked must still be logged")
 	assert.EqualValues(t, http.StatusInternalServerError, request["status"])
-	assert.NotEmpty(t, request["request_id"], "and it must carry the identifier")
+	assert.NotEmpty(t, request["request_id"], "with its request id")
 }

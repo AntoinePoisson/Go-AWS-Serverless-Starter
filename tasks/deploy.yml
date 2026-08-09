@@ -1,13 +1,12 @@
-# --no-install everywhere: bare `npx serverless` on a clone with no node_modules
-# downloads a v4 and deploys with it, whatever frameworkVersion pins.
+# --no-install everywhere: on a clone with no node_modules, bare `npx
+# serverless` downloads a v4 and deploys with it whatever frameworkVersion says.
 version: "3"
 
 vars:
   STAGE: '{{ .STAGE | default "alpha" }}'
 
-# A task named in an included file resolves inside that file's namespace, so a
-# bare `build:dist` here means `deploy:build:dist` - which does not exist. The
-# leading colon addresses the root Taskfile instead.
+# Task names resolve inside this file's namespace, so a bare `build:dist` would
+# mean `deploy:build:dist`. The leading colon points at the root Taskfile.
 tasks:
   package:
     desc: Build the CloudFormation template without deploying (STAGE=alpha)

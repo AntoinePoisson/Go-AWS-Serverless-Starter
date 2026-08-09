@@ -1,5 +1,4 @@
-# Prefixes follow commitlint.config.cjs: an unknown type fails the commit hook
-# and never reaches the changelog.
+# Prefixes have to match commitlint.config.cjs or the commit hook rejects them.
 version: 2
 
 updates:

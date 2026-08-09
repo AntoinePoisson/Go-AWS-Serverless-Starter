@@ -132,7 +132,7 @@ func TestProxyEncodesBinaryResponses(t *testing.T) {
 	assert.Equal(t, payload, decoded)
 }
 
-func TestProxyLeavesTextualResponsesAlone(t *testing.T) {
+func TestProxyDoesNotEncodeTextualResponses(t *testing.T) {
 	for _, contentType := range []string{"application/json", "text/plain; charset=utf-8", "application/problem+json"} {
 		t.Run(contentType, func(t *testing.T) {
 			mux := http.NewServeMux()

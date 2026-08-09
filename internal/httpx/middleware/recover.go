@@ -8,7 +8,7 @@ import (
 	"github.com/AntoinePoisson/go-aws-serverless-starter/internal/httpx"
 )
 
-// Recover turns a panic into a 500 response instead of killing the process.
+// Recover turns a panic into a 500 instead of killing the process.
 func Recover(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		rw := newResponseWriter(w)
@@ -26,8 +26,8 @@ func Recover(next http.Handler) http.Handler {
 				"stack", string(debug.Stack()),
 			)
 
-			// Appending an error document to a started response would only
-			// corrupt what the client is reading.
+			// appending to a started response would only corrupt what the
+			// client is already reading
 			if rw.written {
 				return
 			}

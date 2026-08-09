@@ -11,7 +11,7 @@ import (
 )
 
 // A middleware must not cut a handler off from the writer underneath.
-func TestWrappedWriterStaysReachable(t *testing.T) {
+func TestResponseControllerReachesTheWrappedWriter(t *testing.T) {
 	wrappers := map[string]func(http.Handler) http.Handler{
 		"Logger":  middleware.Logger,
 		"Recover": middleware.Recover,

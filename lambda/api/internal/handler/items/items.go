@@ -19,7 +19,7 @@ type Handler struct {
 	items item.ServiceAPI
 }
 
-// New returns a Handler backed by the given service.
+// New returns a Handler over the item service.
 func New(items item.ServiceAPI) *Handler {
 	return &Handler{items: items}
 }
@@ -32,14 +32,14 @@ func (h *Handler) AddRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("DELETE /items/{id}", httpx.Handle(h.delete))
 }
 
-// ListResponse is the body returned by GET /items. Exported so the generated
-// specification names the schema after it.
+// ListResponse is the body of GET /items. Exported so the generated schema is
+// named after it.
 type ListResponse struct {
 	Items []item.Item `json:"items"`
 	Count int         `json:"count"`
 }
 
-// create stores a new item.
+// create stores an item.
 //
 //	@Id				createItem
 //	@Summary		Create an item
@@ -72,7 +72,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-// get returns a single item.
+// get reads one item.
 //
 //	@Id				getItem
 //	@Summary		Read an item
