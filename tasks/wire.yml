@@ -1,0 +1,22 @@
+version: "3"
+
+tasks:
+  injectors:
+    desc: Regenerate the Wire injectors
+    cmds:
+      - |
+        set -e
+        for dir in lambda/*/; do
+          (cd "$dir" && go tool wire)
+        done
+
+  mocks:
+    desc: Regenerate the mocks of every *api.go interface file
+    cmds:
+      - |
+        set -e
+        find internal lambda -name '*api.go' -not -name 'mock*' | while read -r file; do
+          dir=$(dirname "$file")
+          pkg=$(basename "$dir")
+          go tool mockgen -source="$file" -destination="$dir/mock_$pkg/mock$(basename "$file")"
+        done
