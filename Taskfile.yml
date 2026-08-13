@@ -4,6 +4,7 @@ includes:
   build: ./tasks/build.yml
   clean: ./tasks/clean.yml
   deploy: ./tasks/deploy.yml
+  docs: ./tasks/docs.yml
   wire: ./tasks/wire.yml
 
 tasks:
@@ -18,7 +19,7 @@ tasks:
       - go mod tidy
 
   fmt:
-    desc: Format the Go sources
+    desc: Format the Go sources and the OpenAPI annotations
     cmds:
       - go tool golangci-lint fmt
 

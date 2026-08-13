@@ -76,10 +76,16 @@ linters:
           - gosec
           - noctx
 
+      # docs/ declares no symbol, only swag annotations.
+      - path: ^docs/
+        linters:
+          - revive
+
 formatters:
   enable:
     - gci
     - gofumpt
+    - swaggo # keeps the OpenAPI annotations aligned
 
   settings:
     gci:

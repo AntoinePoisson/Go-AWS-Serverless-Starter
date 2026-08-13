@@ -1,0 +1,45 @@
+version: "3"
+
+vars:
+  # The first directory must hold the -g file: swag resolves it relatively to
+  # that one, not to the working directory.
+  SWAG_DIRS: ./docs,./lambda/api/internal/handler/items,./lambda/public/internal/handler/health,./lambda/public/internal/handler/items,./internal/item,./internal/httpx
+
+tasks:
+  openapi:
+    desc: Regenerate docs/openapi.yaml from the swag annotations
+    sources:
+      - docs/openapi.go
+      - lambda/**/*.go
+      - internal/item/*.go
+      - internal/httpx/*.go
+    generates:
+      - docs/openapi.yaml
+    cmds:
+      # --parseInternal is mandatory: every type this API returns lives under
+      # internal/, and without it swag emits no schemas at all and no error.
+      # --parseDependency would pull AWS SDK schemas in for nothing.
+      - go tool swag init --v3.1 -ot yaml --parseInternal -g openapi.go -d {{.SWAG_DIRS}} -o docs
+      # swag writes swagger.yaml whatever the specification version.
+      - mv docs/swagger.yaml docs/openapi.yaml
+
+  lint:
+    desc: Validate docs/openapi.yaml with Redocly
+    cmds:
+      - npx --no-install redocly lint docs/openapi.yaml
+
+  html:
+    desc: Render docs/api.html from the specification
+    deps: [openapi]
+    cmds:
+      - npx --no-install redocly build-docs docs/openapi.yaml -o docs/api.html
+
+  check:
+    desc: Fail if the committed specification is not what the code produces
+    cmds:
+      - task: openapi
+      - |
+        git diff --exit-code -- docs/openapi.yaml || {
+          echo "docs/openapi.yaml does not match the annotations. Run 'make docs' and commit the result."
+          exit 1
+        }

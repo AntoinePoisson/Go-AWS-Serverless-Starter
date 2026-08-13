@@ -1,0 +1,40 @@
+# The rules below are downgraded to warnings so the gate is the validity of the
+# specification rather than its completeness. Promote them back to `error` one
+# at a time as the annotations fill in.
+extends:
+  - recommended
+
+apis:
+  main:
+    root: docs/openapi.yaml
+
+rules:
+  # An operation that forgot @Security would document itself as open, so this
+  # stays an error. The open routes are listed one by one rather than
+  # downgraded: opening a route has to be written down here.
+  #
+  # swag cannot emit `security: []`, hence an exception list and not an
+  # annotation.
+  security-defined:
+    severity: error
+    exceptions:
+      - path: /health
+        methods: [get]
+      - path: /public/items/{id}
+        methods: [get]
+
+  operation-operationId-unique: error
+  no-invalid-media-type-examples: error
+
+  # The licence belongs to the project built from this template, not to the
+  # template. Declare it in docs/openapi.go and promote this to `error`.
+  info-license: warn
+
+  operation-summary: warn
+  operation-description: warn
+
+  # /health answers 200 or nothing at all, so it has no 4xx to document.
+  operation-4xx-response: warn
+
+  # The localhost servers are real addresses: what `make run-api` binds to.
+  no-server-example.com: warn
