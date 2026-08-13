@@ -3,6 +3,7 @@ version: "3"
 includes:
   build: ./tasks/build.yml
   clean: ./tasks/clean.yml
+  deploy: ./tasks/deploy.yml
   wire: ./tasks/wire.yml
 
 tasks:
