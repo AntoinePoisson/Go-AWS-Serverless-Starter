@@ -1,0 +1,47 @@
+service: bootstrap-go-aws
+
+frameworkVersion: "3"
+
+plugins:
+  - serverless-iam-roles-per-function
+
+provider:
+  name: aws
+  runtime: provided.al2023
+  architecture: arm64
+  stage: ${opt:stage, 'alpha'}
+  region: ${opt:region, self:custom.stage.region}
+  memorySize: 256
+  timeout: 29
+  logRetentionInDays: ${self:custom.stage.logRetentionInDays}
+  httpApi:
+    payload: "2.0"
+    cors:
+      allowedOrigins: ${self:custom.stage.corsOrigins}
+      allowedHeaders:
+        - Content-Type
+        - X-Api-Key
+        - X-Request-Id
+      allowedMethods:
+        - GET
+        - POST
+        - DELETE
+  environment:
+    STAGE: ${self:provider.stage}
+    LOG_LEVEL: ${self:custom.stage.logLevel}
+    ITEMS_TABLE: ${self:custom.itemsTable}
+    VERSION: ${env:VERSION, 'dev'}
+
+package:
+  individually: true
+
+functions:
+  - ${file(./serverless/function-api.js)}
+  - ${file(./serverless/function-public.js)}
+
+resources:
+  - ${file(./serverless/cf-res-dynamodb.yml)}
+
+custom:
+  stage: ${file(./serverless/stage/${opt:stage, 'alpha'}.yml)}
+  itemsTable: ${self:service}-${self:provider.stage}-items

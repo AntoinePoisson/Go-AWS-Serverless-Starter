@@ -1,0 +1,20 @@
+Resources:
+  ItemsTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: ${self:custom.stage.tableDeletionPolicy}
+    UpdateReplacePolicy: ${self:custom.stage.tableDeletionPolicy}
+    Properties:
+      TableName: ${self:custom.itemsTable}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: ${self:custom.stage.pointInTimeRecovery}
+
+Outputs:
+  ItemsTableName:
+    Value: !Ref ItemsTable
