@@ -1,0 +1,15 @@
+region: eu-west-1
+logLevel: info
+logRetentionInDays: 14
+pointInTimeRecovery: true
+
+# Mirrors prod so a release is rehearsed under the same constraints.
+tableDeletionPolicy: Retain
+
+# Replace with the origins allowed to call the API.
+corsOrigins:
+  - https://example.com
+
+# Read from SSM. DEPLOY_API_KEY overrides it, which is what lets `make package`
+# render without AWS credentials.
+apiKey: ${env:DEPLOY_API_KEY, ssm:/${self:service}/preprod/api-key}
