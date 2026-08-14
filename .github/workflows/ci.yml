@@ -1,0 +1,131 @@
+name: CI
+
+on:
+  push:
+    # One branch per stage: dev -> alpha, main -> preprod, prod -> prod.
+    branches: [dev, main, prod]
+  pull_request:
+
+# Read-only by default (least privilege).
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ============================================================
+  # LINT - Formatting and static analysis
+  # ============================================================
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+
+      # setup-go v6 and later pin GOTOOLCHAIN=local, so the toolchain is exactly
+      # the one the `go` directive of go.mod asks for - no silent upgrade at the
+      # first build. That directive therefore carries a full patch version, and
+      # bumping it is how the standard library gets its security fixes.
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      # `fmt --diff` reports instead of rewriting: a CI job that fixes the tree
+      # it is judging would pass on a commit nobody can reproduce locally.
+      - name: Verify the formatting
+        run: |
+          go tool golangci-lint fmt --diff || {
+            echo "::error::sources are not formatted. Run 'make fmt' and commit the result."
+            exit 1
+          }
+
+      # govet and staticcheck are part of the linter set in .golangci.yml.
+      # godox is added here for the same reason the pre-commit hook adds it on a
+      # protected branch: an unfinished thought must not reach main.
+      - name: Run golangci-lint
+        run: go tool golangci-lint run --enable=godox ./...
+
+      # gosec covers the patterns, this covers the published CVEs. It reports
+      # only the vulnerable symbols actually reachable from this code - most of
+      # them in the standard library, which makes the `go` directive of go.mod
+      # the fix for this step as much as any dependency bump.
+      - name: Check the dependencies for known vulnerabilities
+        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+
+  # ============================================================
+  # UNIT TESTS - Every package, race detector on
+  # ============================================================
+  test-unit:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Run the unit tests with the race detector and coverage
+        run: |
+          mkdir -p .coverage
+          go test -race -cover -coverprofile=.coverage/report.out ./...
+
+      - name: Upload the coverage profile
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-profile
+          path: .coverage/report.out
+          retention-days: 7
+          if-no-files-found: ignore
+
+  # ============================================================
+  # BUILD - The artifacts every later job consumes
+  # ============================================================
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      # Mirrors tasks/build.yml, inlined so the workflow needs nothing but Go.
+      - name: Compile both functions for Lambda (linux/arm64)
+        run: |
+          for dir in lambda/*/; do
+            name=$(basename "$dir")
+            mkdir -p "bin/dist/$name"
+            CGO_ENABLED=0 GOOS=linux GOARCH=arm64 \
+              go build -trimpath -ldflags "-s -w" -o "bin/dist/$name/bootstrap" "./lambda/$name"
+          done
+
+      - name: Package each function into a deployment zip
+        run: |
+          for dir in bin/dist/*/; do
+            name=$(basename "$dir")
+            (cd "$dir" && zip -q -X "../$name.zip" bootstrap)
+          done
+
+      - name: Upload the Lambda artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: lambda-artifacts
+          path: bin/dist/*.zip
+          retention-days: 7
