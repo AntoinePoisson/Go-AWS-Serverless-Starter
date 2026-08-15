@@ -232,3 +232,104 @@ jobs:
           path: e2e/reports
           retention-days: 7
           if-no-files-found: ignore
+
+  # ============================================================
+  # API DOCUMENTATION - The specification is generated, so it can drift
+  # ============================================================
+  openapi:
+    name: API Documentation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install the documentation tooling
+        run: npm ci
+
+      # The same command `make docs` runs, inlined so the workflow needs no
+      # task binary. --parseInternal is what keeps the specification from
+      # coming out empty; see tasks/docs.yml.
+      - name: Regenerate the specification
+        run: |
+          go tool swag init --v3.1 -ot yaml --parseInternal \
+            -g openapi.go \
+            -d ./docs,./lambda/api/internal/handler/items,./lambda/public/internal/handler/health,./lambda/public/internal/handler/items,./internal/item,./internal/httpx \
+            -o docs
+          mv docs/swagger.yaml docs/openapi.yaml
+
+      - name: Fail if the committed specification is stale
+        run: |
+          git diff --exit-code -- docs/openapi.yaml || {
+            echo "::error::docs/openapi.yaml does not match the annotations. Run 'make docs' and commit the result."
+            exit 1
+          }
+
+      # --no-install everywhere npx runs, as in tasks/: without it a missing
+      # node_modules is answered by a silent download of the latest release
+      # rather than by an error.
+      - name: Lint the specification
+        run: npx --no-install redocly lint docs/openapi.yaml
+
+      - name: Render the reference
+        run: npx --no-install redocly build-docs docs/openapi.yaml -o docs/api.html
+
+      # Not committed - see .gitignore. Downloading the artifact is how you read
+      # the reference for a given commit.
+      - name: Upload the rendered reference
+        uses: actions/upload-artifact@v7
+        with:
+          name: api-reference
+          path: docs/api.html
+          retention-days: 7
+
+  # ============================================================
+  # INFRASTRUCTURE - Render every stage without deploying
+  # ============================================================
+  infra:
+    name: Infrastructure
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [build]
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install the Serverless Framework
+        run: npm ci
+
+      - name: Download the Lambda artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: lambda-artifacts
+          path: bin/dist
+
+      # Catches route collisions, unresolved variables and malformed resources
+      # before anyone tries to deploy.
+      - name: Render the CloudFormation template of every stage
+        run: |
+          for stage in alpha preprod prod; do
+            echo "::group::$stage"
+            npx --no-install serverless package --stage "$stage"
+            echo "::endgroup::"
+          done
+        env:
+          DEPLOY_API_KEY: rendered-in-ci
