@@ -11,7 +11,7 @@ import (
 // Recover turns a panic into a 500 instead of killing the process.
 func Recover(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		rw := newResponseWriter(w)
+		rw := wrapResponseWriter(w)
 
 		defer func() {
 			recovered := recover()

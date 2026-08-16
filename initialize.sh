@@ -122,6 +122,34 @@ replace_everywhere() {
 	done
 }
 
+# The OpenAPI title is prose, so no identifier substitution ever reaches it.
+# Derive it from the service name instead: orders-api -> "Orders API",
+# orders -> "Orders API".
+api_title() {
+	printf '%s' "$1" | awk -F- '{
+		title = ""
+		for (i = 1; i <= NF; i++) {
+			word = $i
+			if (word ~ /^(api|aws|cdn|db|dns|http|https|id|sdk|sns|sqs|ssm|url)$/) {
+				word = toupper(word)
+			} else {
+				word = toupper(substr(word, 1, 1)) substr(word, 2)
+			}
+			title = title (i > 1 ? " " : "") word
+		}
+		printf "%s", (word == "API" ? title : title " API")
+	}'
+}
+
+# Only the value is rewritten, the tabs that follow @title stay: the swaggo
+# formatter aligns on the annotation names and not on what they hold.
+retitle_api() {
+	local title=$1
+	[ -f docs/openapi.go ] || return 0
+	sed_inplace "s|^\(//[[:space:]]*@title[[:space:]][[:space:]]*\).*$|\1$(sed_replacement "$title")|" docs/openapi.go
+	info "docs/openapi.go title -> $title"
+}
+
 if [ "$DO_RENAME" = true ]; then
 	if [ -z "$MODULE" ]; then
 		printf '%sModule path%s of the new project [%s]: ' "$BOLD" "$RESET" "$current_module"
@@ -161,7 +189,10 @@ if [ "$DO_RENAME" = true ]; then
 
 		# the module path contains the service name, so it goes first
 		[ "$MODULE" != "$current_module" ] && replace_everywhere "$current_module" "$MODULE"
-		[ "$SERVICE" != "$current_service" ] && replace_everywhere "$current_service" "$SERVICE"
+		if [ "$SERVICE" != "$current_service" ]; then
+			replace_everywhere "$current_service" "$SERVICE"
+			retitle_api "$(api_title "$SERVICE")"
+		fi
 	fi
 fi
 
@@ -209,6 +240,7 @@ fi
 if [ "$DO_SETUP" = true ]; then
 	command -v go >/dev/null || die "go is not installed"
 	command -v npm >/dev/null || die "npm is not installed"
+	command -v make >/dev/null || die "make is not installed"
 
 	step "Resolving the Go dependencies"
 	go mod tidy
@@ -229,15 +261,14 @@ if [ "$DO_SETUP" = true ]; then
 	step "Installing the end-to-end test dependencies"
 	npm install --silent --prefix e2e
 
-	# the rename touched the title in docs/openapi.go, so regenerate or the
-	# first commit fails docs-check
+	# The rename touched the title and the external documentation link in
+	# docs/openapi.go, so the committed spec no longer matches the annotations
+	# and the first commit would fail docs-check. Through `make`, which owns the
+	# swag invocation, and which builds `task` on the way so the first real
+	# target does not.
 	if [ "$DO_RENAME" = true ] && [ -f docs/openapi.go ]; then
 		step "Regenerating the OpenAPI specification"
-		go tool swag init --v3.1 -ot yaml --parseInternal \
-			-g openapi.go \
-			-d ./docs,./lambda/api/internal/handler/items,./lambda/public/internal/handler/health,./lambda/public/internal/handler/items,./internal/item,./internal/httpx \
-			-o docs >/dev/null 2>&1
-		mv docs/swagger.yaml docs/openapi.yaml
+		make docs >/dev/null
 		info "docs/openapi.yaml"
 	fi
 

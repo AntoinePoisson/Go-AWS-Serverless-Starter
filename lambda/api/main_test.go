@@ -61,9 +61,11 @@ func TestNewHandlerLogsARequestThatPanics(t *testing.T) {
 	service.EXPECT().List(gomock.Any(), gomock.Any()).DoAndReturn(
 		func(context.Context, int32) ([]item.Item, error) { panic("boom") })
 
+	// the decorator main() installs through cfg.SetupLogging, which is what
+	// puts the request id on the records
 	var buf bytes.Buffer
 	previous := slog.Default()
-	slog.SetDefault(slog.New(slog.NewJSONHandler(&buf, nil)))
+	slog.SetDefault(slog.New(middleware.LogRequestID(slog.NewJSONHandler(&buf, nil))))
 	t.Cleanup(func() { slog.SetDefault(previous) })
 
 	handler, err := newHandler(&config.Config{APIKey: "secret"}, items.New(service))

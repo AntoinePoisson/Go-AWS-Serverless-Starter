@@ -10,7 +10,13 @@ type responseWriter struct {
 	written bool
 }
 
-func newResponseWriter(w http.ResponseWriter) *responseWriter {
+// wrapResponseWriter reuses the wrapper an outer middleware already installed.
+// Logger and Recover both need one and are always chained together, so without
+// this every request carries two of them, the inner one shadowing the outer.
+func wrapResponseWriter(w http.ResponseWriter) *responseWriter {
+	if wrapped, ok := w.(*responseWriter); ok {
+		return wrapped
+	}
 	return &responseWriter{ResponseWriter: w, status: http.StatusOK}
 }
 

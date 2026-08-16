@@ -2,6 +2,7 @@ package item_test
 
 import (
 	"errors"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -48,6 +49,31 @@ func TestServiceCreateRejectsInvalidInput(t *testing.T) {
 		{name: "name too long", input: item.CreateInput{Name: strings.Repeat("a", 201)}},
 		{name: "name too long in runes", input: item.CreateInput{Name: strings.Repeat("é", 201)}},
 		{name: "too many tags", input: item.CreateInput{Name: "demo", Tags: make([]string, 21)}},
+		// nothing below this line reaches the repository either: an item that
+		// big is refused by DynamoDB, and a rejected payload is the caller's
+		// mistake, not a server error.
+		{
+			name:  "tag too long",
+			input: item.CreateInput{Name: "demo", Tags: []string{strings.Repeat("a", 51)}},
+		},
+		{
+			name:  "too many metadata entries",
+			input: item.CreateInput{Name: "demo", Metadata: manyEntries(21)},
+		},
+		{
+			name: "metadata key too long",
+			input: item.CreateInput{
+				Name:     "demo",
+				Metadata: map[string]string{strings.Repeat("k", 101): "value"},
+			},
+		},
+		{
+			name: "metadata value too long",
+			input: item.CreateInput{
+				Name:     "demo",
+				Metadata: map[string]string{"owner": strings.Repeat("v", 1001)},
+			},
+		},
 	}
 
 	for _, c := range cases {
@@ -60,6 +86,38 @@ func TestServiceCreateRejectsInvalidInput(t *testing.T) {
 			assert.ErrorIs(t, err, item.ErrInvalidInput)
 		})
 	}
+}
+
+func manyEntries(n int) map[string]string {
+	entries := make(map[string]string, n)
+	for i := range n {
+		entries[strconv.Itoa(i)] = "value"
+	}
+	return entries
+}
+
+// The bounds are what fits, so what fits has to go through.
+func TestServiceCreateAcceptsThePayloadAtEveryBound(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	repo := mock_item.NewMockRepository(ctrl)
+
+	repo.EXPECT().Put(gomock.Any(), gomock.Any()).Return(nil)
+
+	tags := make([]string, 20)
+	for i := range tags {
+		tags[i] = strings.Repeat("a", 50)
+	}
+
+	metadata := manyEntries(20)
+	metadata["0"] = strings.Repeat("v", 1000)
+
+	_, err := item.NewService(repo).Create(t.Context(), item.CreateInput{
+		Name:     strings.Repeat("a", 200),
+		Tags:     tags,
+		Metadata: metadata,
+	})
+
+	require.NoError(t, err)
 }
 
 func TestServiceCreateMeasuresTheNameInRunes(t *testing.T) {

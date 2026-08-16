@@ -52,8 +52,11 @@ jobs:
       - name: Run golangci-lint
         run: go tool golangci-lint run --enable=godox ./...
 
+      # A module tool and not @latest: the scanner is pinned in go.mod and bumped
+      # by Dependabot like everything else. The vulnerability database is fetched
+      # at run time either way, so this stays as current as it was.
       - name: Check the dependencies for known vulnerabilities
-        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+        run: make vuln
 
   test-unit:
     name: Unit Tests
@@ -69,24 +72,11 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      # -coverpkg: most of the handler code is covered from another package's
-      # tests and would count as untested without it.
-      - name: Run the unit tests with the race detector and coverage
-        run: |
-          mkdir -p .coverage
-          go test -race -coverpkg=./... -coverprofile=.coverage/report.out ./...
-
-      # same as `make cover`, inlined so this job needs nothing but Go
-      - name: Enforce the coverage floor
-        run: |
-          grep -v -e 'wire_gen\.go:' -e '/mock_' -e '/main\.go:' \
-            .coverage/report.out > .coverage/handwritten.out
-          total=$(go tool cover -func=.coverage/handwritten.out | awk '/^total:/ {print $NF}' | tr -d '%')
-          echo "hand-written code: $total% covered, floor 80%"
-          awk -v t="$total" 'BEGIN { exit (t + 0 >= 80) ? 0 : 1 }' || {
-            echo "::error::coverage $total% is below the 80% floor"
-            exit 1
-          }
+      # `cover` depends on `test`, so this runs the suite and then judges it.
+      # Through `make` so the floor lives in one place, the Taskfile; the
+      # Makefile falls back to `go run` and this job still needs nothing but Go.
+      - name: Run the unit tests and enforce the coverage floor
+        run: make cover
 
       - name: Upload the coverage profile
         if: always()
@@ -139,22 +129,9 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      # mirrors tasks/build.yml
-      - name: Compile both functions for Lambda (linux/arm64)
-        run: |
-          for dir in lambda/*/; do
-            name=$(basename "$dir")
-            mkdir -p "bin/dist/$name"
-            CGO_ENABLED=0 GOOS=linux GOARCH=arm64 \
-              go build -trimpath -ldflags "-s -w" -o "bin/dist/$name/bootstrap" "./lambda/$name"
-          done
-
-      - name: Package each function into a deployment zip
-        run: |
-          for dir in bin/dist/*/; do
-            name=$(basename "$dir")
-            (cd "$dir" && zip -q -X "../$name.zip" bootstrap)
-          done
+      # the flags that end up in the shipped zips live in tasks/build.yml
+      - name: Compile and package both functions for Lambda (linux/arm64)
+        run: make build
 
       - name: Upload the Lambda artifacts
         uses: actions/upload-artifact@v7
@@ -207,19 +184,8 @@ jobs:
       - name: Create the items table in DynamoDB Local
         run: go run ./tools/localdb
 
-      - name: Start both functions and wait for them to listen
-        run: |
-          LISTEN_ADDR=:8080 go run ./lambda/api &
-          LISTEN_ADDR=:8081 go run ./lambda/public &
-          for port in 8080 8081; do
-            for _ in $(seq 30); do
-              nc -z localhost "$port" && continue 2
-              sleep 1
-            done
-            echo "the function on port $port never started listening"
-            exit 1
-          done
-
+      # Playwright starts both functions and waits for their ports, see
+      # e2e/playwright.config.ts
       - name: Run the Playwright tests
         run: npm --prefix e2e test
 
@@ -256,21 +222,9 @@ jobs:
       - name: Install the documentation tooling
         run: npm ci
 
-      # what `make docs` runs. --parseInternal is not optional, see tasks/docs.yml
-      - name: Regenerate the specification
-        run: |
-          go tool swag init --v3.1 -ot yaml --parseInternal \
-            -g openapi.go \
-            -d ./docs,./lambda/api/internal/handler/items,./lambda/public/internal/handler/health,./lambda/public/internal/handler/items,./internal/item,./internal/httpx \
-            -o docs
-          mv docs/swagger.yaml docs/openapi.yaml
-
+      # regenerates and diffs; the swag invocation lives in tasks/docs.yml
       - name: Fail if the committed specification is stale
-        run: |
-          git diff --exit-code -- docs/openapi.yaml || {
-            echo "::error::docs/openapi.yaml does not match the annotations. Run 'make docs' and commit the result."
-            exit 1
-          }
+        run: make docs-check
 
       # --no-install: bare npx silently downloads the latest release instead of
       # failing when node_modules is missing.

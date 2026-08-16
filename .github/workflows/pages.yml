@@ -50,16 +50,8 @@ jobs:
 
       # Regenerated instead of read from the tree. CI already fails on the same
       # commit when the two disagree.
-      - name: Regenerate the specification
-        run: |
-          go tool swag init --v3.1 -ot yaml --parseInternal \
-            -g openapi.go \
-            -d ./docs,./lambda/api/internal/handler/items,./lambda/public/internal/handler/health,./lambda/public/internal/handler/items,./internal/item,./internal/httpx \
-            -o docs
-          mv docs/swagger.yaml docs/openapi.yaml
-
-      - name: Render the reference
-        run: npx --no-install redocly build-docs docs/openapi.yaml -o docs/api.html
+      - name: Regenerate the specification and render the reference
+        run: make docs
 
       # the reference is the whole site, so it has to be index.html
       - name: Assemble the site
