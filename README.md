@@ -1,6 +1,7 @@
 # Go AWS Serverless Starter
 
 [![CI](../../actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml)
+[![OpenAPI Live](https://img.shields.io/badge/docs-OpenAPI%20reference-85EA2D?logo=openapiinitiative&logoColor=white)](https://antoinepoisson.github.io/Go-AWS-Serverless-Starter/)
 ![Go](https://img.shields.io/badge/go-1.25-00ADD8?logo=go&logoColor=white)
 ![Coverage](https://img.shields.io/badge/coverage-%E2%89%A580%25-brightgreen)
 ![Runtime](https://img.shields.io/badge/lambda-provided.al2023%20%C2%B7%20arm64-FF9900?logo=awslambda&logoColor=white)
@@ -138,8 +139,8 @@ shared secret in an environment variable, and rotating it is a deploy. Read the
 parameter at cold start instead, or move the check to a Lambda authorizer, if
 the value has to stay inside Parameter Store.
 
-The API reference is published to GitHub Pages from `main`; turn Pages on with
-Settings → Pages → Source: GitHub Actions, or that workflow fails.
+The OpenAPI reference badge at the top is published to GitHub Pages from
+`main`.
 
 Before your first release: commits must follow
 [Conventional Commits](https://www.conventionalcommits.org), which `commitlint`
