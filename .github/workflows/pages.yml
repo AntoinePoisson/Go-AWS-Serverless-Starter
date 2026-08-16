@@ -1,4 +1,4 @@
-name: Documentation
+name: OpenAPI
 
 # Publishes the API reference built from main. docs/api.html is generated and
 # git-ignored, so without this the only way to read it is a CI artifact.
