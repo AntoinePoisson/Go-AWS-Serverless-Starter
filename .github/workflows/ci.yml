@@ -18,11 +18,15 @@ on:
 permissions:
   contents: read
 
-# A manual run is never disposable: it may deploy, and cancelling one
-# mid-`serverless deploy` leaves the stack in UPDATE_IN_PROGRESS.
+# Only a pull_request run is disposable. Every push to dev, main or prod may
+# deploy, and cancelling one mid-`serverless deploy` leaves the stack in
+# UPDATE_IN_PROGRESS - a state nothing but a human gets it out of.
+#
+# This used to read `!= 'workflow_dispatch'`, which was correct only while
+# workflow_dispatch was the sole path to a deployment.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
-  cancel-in-progress: ${{ github.event_name != 'workflow_dispatch' }}
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   # ============================================================
