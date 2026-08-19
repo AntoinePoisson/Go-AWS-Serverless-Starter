@@ -14,11 +14,11 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
-	"github.com/antoinepoisson/bootstrap-go-aws/internal/config"
-	"github.com/antoinepoisson/bootstrap-go-aws/internal/httpx/middleware"
-	"github.com/antoinepoisson/bootstrap-go-aws/internal/item"
-	"github.com/antoinepoisson/bootstrap-go-aws/internal/item/mock_item"
-	"github.com/antoinepoisson/bootstrap-go-aws/lambda/api/internal/handler/items"
+	"github.com/AntoinePoisson/go-aws-serverless-starter/internal/config"
+	"github.com/AntoinePoisson/go-aws-serverless-starter/internal/httpx/middleware"
+	"github.com/AntoinePoisson/go-aws-serverless-starter/internal/item"
+	"github.com/AntoinePoisson/go-aws-serverless-starter/internal/item/mock_item"
+	"github.com/AntoinePoisson/go-aws-serverless-starter/lambda/api/internal/handler/items"
 )
 
 func TestNewHandlerRequiresAnAPIKey(t *testing.T) {

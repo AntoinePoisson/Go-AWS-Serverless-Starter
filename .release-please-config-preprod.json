@@ -5,7 +5,7 @@
   "packages": {
     ".": {
       "release-type": "go",
-      "package-name": "bootstrap-go-aws",
+      "package-name": "go-aws-serverless-starter",
       "changelog-path": "CHANGELOG-preprod.md",
       "bump-minor-pre-major": true,
       "bump-patch-for-minor-pre-major": true,

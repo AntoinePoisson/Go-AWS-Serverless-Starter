@@ -7,8 +7,8 @@ import (
 
 	"github.com/google/wire"
 
-	"github.com/antoinepoisson/bootstrap-go-aws/internal/httpx"
-	"github.com/antoinepoisson/bootstrap-go-aws/internal/item"
+	"github.com/AntoinePoisson/go-aws-serverless-starter/internal/httpx"
+	"github.com/AntoinePoisson/go-aws-serverless-starter/internal/item"
 )
 
 // WireSet provides the handler.

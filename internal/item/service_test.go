@@ -10,8 +10,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
-	"github.com/antoinepoisson/bootstrap-go-aws/internal/item"
-	"github.com/antoinepoisson/bootstrap-go-aws/internal/item/mock_item"
+	"github.com/AntoinePoisson/go-aws-serverless-starter/internal/item"
+	"github.com/AntoinePoisson/go-aws-serverless-starter/internal/item/mock_item"
 )
 
 func TestServiceCreate(t *testing.T) {

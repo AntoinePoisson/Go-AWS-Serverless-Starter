@@ -6,7 +6,7 @@
 // general-information file, and neither binary owns the title of the service.
 package docs
 
-//	@title			bootstrap-go-aws API
+//	@title			Go AWS Serverless Starter API
 //	@version		1.0
 //	@description	Item resource served by two Lambda functions behind a single HTTP API.
 //	@description
@@ -18,7 +18,7 @@ package docs
 //	@description				Errors carry a JSON body of the shape {"code": "...", "message": "..."},
 //	@description				except for the 404 and 405 produced by the router itself.
 //
-//	@externalDocs.url			https://github.com/antoinepoisson/bootstrap-go-aws
+//	@externalDocs.url			https://github.com/AntoinePoisson/go-aws-serverless-starter
 //	@externalDocs.description	Source repository and README
 //
 //	@servers.url				http://localhost:8080

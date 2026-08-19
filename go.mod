@@ -1,4 +1,4 @@
-module github.com/antoinepoisson/bootstrap-go-aws
+module github.com/AntoinePoisson/go-aws-serverless-starter
 
 go 1.25.12
 

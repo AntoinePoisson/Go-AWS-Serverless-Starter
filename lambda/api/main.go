@@ -7,10 +7,10 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/antoinepoisson/bootstrap-go-aws/internal/config"
-	"github.com/antoinepoisson/bootstrap-go-aws/internal/httpx"
-	"github.com/antoinepoisson/bootstrap-go-aws/internal/httpx/middleware"
-	"github.com/antoinepoisson/bootstrap-go-aws/lambda/api/internal/handler/items"
+	"github.com/AntoinePoisson/go-aws-serverless-starter/internal/config"
+	"github.com/AntoinePoisson/go-aws-serverless-starter/internal/httpx"
+	"github.com/AntoinePoisson/go-aws-serverless-starter/internal/httpx/middleware"
+	"github.com/AntoinePoisson/go-aws-serverless-starter/lambda/api/internal/handler/items"
 )
 
 func main() {

@@ -7,10 +7,10 @@
 package main
 
 import (
-	"github.com/antoinepoisson/bootstrap-go-aws/internal/awsx"
-	"github.com/antoinepoisson/bootstrap-go-aws/internal/config"
-	"github.com/antoinepoisson/bootstrap-go-aws/internal/item"
-	"github.com/antoinepoisson/bootstrap-go-aws/lambda/api/internal/handler/items"
+	"github.com/AntoinePoisson/go-aws-serverless-starter/internal/awsx"
+	"github.com/AntoinePoisson/go-aws-serverless-starter/internal/config"
+	"github.com/AntoinePoisson/go-aws-serverless-starter/internal/item"
+	"github.com/AntoinePoisson/go-aws-serverless-starter/lambda/api/internal/handler/items"
 	"net/http"
 )
 

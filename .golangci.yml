@@ -92,7 +92,7 @@ formatters:
       sections:
         - standard
         - default
-        - prefix(github.com/antoinepoisson/bootstrap-go-aws)
+        - prefix(github.com/AntoinePoisson/go-aws-serverless-starter)
 
     gofumpt:
       extra-rules: true

@@ -15,9 +15,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/antoinepoisson/bootstrap-go-aws/internal/awsx"
-	"github.com/antoinepoisson/bootstrap-go-aws/internal/config"
-	"github.com/antoinepoisson/bootstrap-go-aws/internal/item"
+	"github.com/AntoinePoisson/go-aws-serverless-starter/internal/awsx"
+	"github.com/AntoinePoisson/go-aws-serverless-starter/internal/config"
+	"github.com/AntoinePoisson/go-aws-serverless-starter/internal/item"
 )
 
 const integrationTable = "items-integration"

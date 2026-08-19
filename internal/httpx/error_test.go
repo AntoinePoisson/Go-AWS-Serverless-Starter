@@ -9,7 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/antoinepoisson/bootstrap-go-aws/internal/httpx"
+	"github.com/AntoinePoisson/go-aws-serverless-starter/internal/httpx"
 )
 
 func TestWriteErrorRendersHTTPError(t *testing.T) {
