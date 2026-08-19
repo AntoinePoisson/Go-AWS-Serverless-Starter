@@ -21,5 +21,13 @@ module.exports = {
         'test',
       ],
     ],
+
+    // config-conventional caps the subject and every body/footer line at 100
+    // characters. A commit message is where the reasoning behind a change
+    // lives, so nothing here is worth truncating: the caps are off and the
+    // wrapping is left to whoever writes the message.
+    'header-max-length': [0, 'always', Infinity],
+    'body-max-line-length': [0, 'always', Infinity],
+    'footer-max-line-length': [0, 'always', Infinity],
   },
 };

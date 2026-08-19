@@ -364,6 +364,7 @@ jobs:
     outputs:
       stage: ${{ steps.target.outputs.stage }}
       version: ${{ steps.target.outputs.version }}
+      enabled: ${{ steps.target.outputs.enabled }}
     steps:
       - name: Check out the repository
         uses: actions/checkout@v7
@@ -373,6 +374,8 @@ jobs:
       # stage nobody chose.
       - name: Resolve the stage and the version
         id: target
+        env:
+          DEPLOY_ENABLED: ${{ vars.DEPLOY_ENABLED }}
         run: |
           set -euo pipefail
 
@@ -413,15 +416,43 @@ jobs:
           # ordering, and accepted as-is in a Lambda environment variable.
           version="${base}+${GITHUB_SHA::7}"
 
+          # No AWS account stands behind a fresh clone of this template, so the
+          # deployment is opt-in: without the DEPLOY_ENABLED repository variable
+          # the pipeline stops after the checks instead of failing on an empty
+          # role ARN. Resolution still runs, so the summary reports what WOULD
+          # have shipped - a skipped job explains nothing on its own.
+          if [ "${DEPLOY_ENABLED:-}" = "true" ]; then
+            enabled=true
+            echo "Deploying **$stage** as \`$version\`" >> "$GITHUB_STEP_SUMMARY"
+          else
+            enabled=false
+            echo "::notice::deployment is disabled; set the DEPLOY_ENABLED repository variable to 'true' to deploy $stage"
+            {
+              echo "### Deployment disabled"
+              echo
+              echo "\`$stage\` would have shipped as \`$version\`."
+              echo
+              echo "Set the \`DEPLOY_ENABLED\` repository variable to \`true\`, along"
+              echo "with the \`AWS_REGION\` variable and the \`AWS_DEPLOY_ROLE_ARN\`"
+              echo "secret, to deploy and release from this repository."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
           echo "stage=$stage"     >> "$GITHUB_OUTPUT"
           echo "version=$version" >> "$GITHUB_OUTPUT"
-          echo "Deploying **$stage** as \`$version\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "enabled=$enabled" >> "$GITHUB_OUTPUT"
 
   # ============================================================
   # DEPLOY - Ships the artifacts the checks ran against
   # ============================================================
   deploy:
     name: Deploy ${{ needs.resolve.outputs.stage }}
+    # The switch `resolve` computed. Skipping here skips both release jobs with
+    # it, since each of them requires `needs.deploy.result == 'success'`.
+    #
+    # An `if:` with no status function keeps the implicit success() over every
+    # need, so this narrows the gate below and never widens it.
+    if: needs.resolve.outputs.enabled == 'true'
     # No `always()` anywhere in this job, unlike the template this pipeline is
     # modelled on. It downloads `lambda-artifacts`, so always() would only ever
     # unblock the "build green, tests red" case - exactly the one to forbid. A
