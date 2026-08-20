@@ -3,6 +3,7 @@ version: "3"
 includes:
   build: ./tasks/build.yml
   clean: ./tasks/clean.yml
+  demo: ./tasks/demo.yml
   deploy: ./tasks/deploy.yml
   docs: ./tasks/docs.yml
   local: ./tasks/local.yml

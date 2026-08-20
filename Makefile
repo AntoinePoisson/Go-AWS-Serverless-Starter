@@ -74,5 +74,8 @@ run-public: ## Run the public function on port 8081
 e2e: ## Run the end-to-end tests
 	@cd e2e && npm test
 
+demo: ## Record the README GIF from docs/demo.tape
+	@$(TASK) demo:gif
+
 clean: ## Remove every build and test artifact
 	@$(TASK) clean:all
