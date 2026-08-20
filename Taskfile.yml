@@ -51,3 +51,24 @@ tasks:
     deps: [test]
     cmds:
       - go tool cover -html=.coverage/report.out
+
+  coverage:check:
+    desc: Fail if the hand-written code is below the coverage floor
+    deps: [test]
+    vars:
+      FLOOR: 80
+    cmds:
+      # Generated injectors, generated mocks and every main() come out first:
+      # nothing in them is worth a test, and their weight is what would let the
+      # code that IS worth one drift below the floor unnoticed. The `mode:` line
+      # matches none of the patterns, so it survives the filter.
+      - |
+        set -eu
+        grep -v -e 'wire_gen\.go:' -e '/mock_' -e '/main\.go:' \
+          .coverage/report.out > .coverage/handwritten.out
+        total=$(go tool cover -func=.coverage/handwritten.out | awk '/^total:/ {print $NF}' | tr -d '%')
+        echo "hand-written code: $total% covered, floor {{ .FLOOR }}%"
+        awk -v t="$total" -v f={{ .FLOOR }} 'BEGIN { exit (t + 0 >= f + 0) ? 0 : 1 }' || {
+          echo "coverage is below the floor, write the missing tests"
+          exit 1
+        }

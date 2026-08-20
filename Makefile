@@ -2,7 +2,7 @@ TASK ?= $(shell command -v task 2>/dev/null || echo 'go run github.com/go-task/t
 STAGE ?= alpha
 
 .DEFAULT_GOAL := help
-.PHONY: help init build build-host test test-integration fmt lint tidy wire mocks docs docs-check package deploy deploy-fn remove db db-stop run-api run-public e2e clean
+.PHONY: help init build build-host test test-integration cover fmt lint tidy wire mocks docs docs-check package deploy deploy-fn remove db db-stop run-api run-public e2e demo clean
 
 help: ## Show the available targets
 	@grep -hE '^[a-z0-9-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -22,6 +22,9 @@ test: ## Run the unit tests with coverage
 
 test-integration: ## Run the integration tests against DynamoDB Local
 	@$(TASK) test:integration
+
+cover: ## Fail if the hand-written code is below the coverage floor
+	@$(TASK) coverage:check
 
 fmt: ## Format the Go sources and the OpenAPI annotations
 	@$(TASK) fmt

@@ -89,10 +89,26 @@ jobs:
           go-version-file: go.mod
           cache: true
 
+      # -coverpkg, as in tasks: most of the handler code is covered from another
+      # package's tests, and without it those statements count as untested.
       - name: Run the unit tests with the race detector and coverage
         run: |
           mkdir -p .coverage
-          go test -race -cover -coverprofile=.coverage/report.out ./...
+          go test -race -coverpkg=./... -coverprofile=.coverage/report.out ./...
+
+      # Mirrors `make cover`, inlined so the workflow needs nothing but Go.
+      # Generated injectors, generated mocks and every main() are dropped before
+      # the number is computed - see the task for why.
+      - name: Enforce the coverage floor
+        run: |
+          grep -v -e 'wire_gen\.go:' -e '/mock_' -e '/main\.go:' \
+            .coverage/report.out > .coverage/handwritten.out
+          total=$(go tool cover -func=.coverage/handwritten.out | awk '/^total:/ {print $NF}' | tr -d '%')
+          echo "hand-written code: $total% covered, floor 80%"
+          awk -v t="$total" 'BEGIN { exit (t + 0 >= 80) ? 0 : 1 }' || {
+            echo "::error::coverage $total% is below the 80% floor"
+            exit 1
+          }
 
       - name: Upload the coverage profile
         if: always()
