@@ -41,6 +41,7 @@ functions:
 
 resources:
   - ${file(./serverless/cf-res-dynamodb.yml)}
+  - ${file(./serverless/cf-res-alarms.yml)}
 
 custom:
   stage: ${file(./serverless/stage/${opt:stage, 'alpha'}.yml)}
