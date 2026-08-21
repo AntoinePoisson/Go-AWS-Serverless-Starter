@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -45,4 +46,26 @@ func TestLoggerRecordsTheRequest(t *testing.T) {
 func TestLoggerRaisesTheLevelOnServerErrors(t *testing.T) {
 	assert.Equal(t, "ERROR", captureLog(t, http.StatusInternalServerError)["level"])
 	assert.Equal(t, "INFO", captureLog(t, http.StatusNotFound)["level"])
+}
+
+// LogRequestID already puts the id on every record that carries a request
+// context. Logger adding its own writes the key twice in the same JSON object:
+// still valid JSON, but a nuisance to query and a surprise to read.
+func TestLoggerLeavesTheRequestIDToTheDecorator(t *testing.T) {
+	var buf bytes.Buffer
+	previous := slog.Default()
+	slog.SetDefault(slog.New(middleware.LogRequestID(slog.NewJSONHandler(&buf, nil))))
+	t.Cleanup(func() { slog.SetDefault(previous) })
+
+	handler := middleware.RequestID(middleware.Logger(http.HandlerFunc(
+		func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) },
+	)))
+
+	req := httptest.NewRequest(http.MethodGet, "/items", nil)
+	req.Header.Set(middleware.RequestIDHeader, "req-42")
+	handler.ServeHTTP(httptest.NewRecorder(), req)
+
+	line := buf.String()
+	assert.Equal(t, 1, strings.Count(line, `"request_id"`), "the key must be written once")
+	assert.Contains(t, line, `"request_id":"req-42"`)
 }

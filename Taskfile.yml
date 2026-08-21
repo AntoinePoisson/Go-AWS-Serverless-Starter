@@ -31,6 +31,13 @@ tasks:
     cmds:
       - go tool golangci-lint run ./...
 
+  vuln:
+    # Reachability analysis, so a vulnerable dependency this code never calls
+    # into is reported as unaffected instead of blocking the build.
+    desc: Report the known vulnerabilities this code can reach
+    cmds:
+      - go tool govulncheck ./...
+
   test:
     desc: Run the unit tests with coverage
     # -coverpkg to match what CI measures
@@ -44,6 +51,15 @@ tasks:
     deps: [local:db]
     cmds:
       - go test -tags=integration -count=1 ./internal/item/...
+
+  e2e:
+    desc: Run the end-to-end tests
+    # Playwright starts both functions itself, they only need the settings the
+    # local runs read. The table has to exist before they answer, hence the dep.
+    dotenv: [".env", ".env.example"]
+    deps: [local:db]
+    cmds:
+      - npm --prefix e2e test
 
   coverage:
     desc: Open the coverage report in a browser

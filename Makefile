@@ -2,7 +2,7 @@ TASK ?= $(shell command -v task 2>/dev/null || echo 'go run github.com/go-task/t
 STAGE ?= alpha
 
 .DEFAULT_GOAL := help
-.PHONY: help init build build-host test test-integration cover fmt lint tidy wire mocks docs docs-check package deploy deploy-fn remove db db-stop run-api run-public e2e demo clean
+.PHONY: help init build build-host test test-integration cover fmt lint vuln tidy wire mocks docs docs-check package deploy deploy-fn remove db db-stop run-api run-public e2e demo clean
 
 help: ## Show the available targets
 	@grep -hE '^[a-z0-9-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -31,6 +31,9 @@ fmt: ## Format the Go sources and the OpenAPI annotations
 
 lint: ## Run golangci-lint
 	@$(TASK) lint
+
+vuln: ## Report the known vulnerabilities this code can reach
+	@$(TASK) vuln
 
 tidy: ## Sync go.mod and go.sum
 	@$(TASK) tidy
@@ -71,8 +74,8 @@ run-api: ## Run the api function on port 8080
 run-public: ## Run the public function on port 8081
 	@$(TASK) local:public
 
-e2e: ## Run the end-to-end tests
-	@cd e2e && npm test
+e2e: ## Run the end-to-end tests (starts the database and both functions)
+	@$(TASK) e2e
 
 demo: ## Record the README GIF from docs/demo.tape
 	@$(TASK) demo:gif

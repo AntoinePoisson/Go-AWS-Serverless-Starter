@@ -83,7 +83,7 @@ run locally, before the code leaves the machine.
 
 | Check | What it enforces | Runs on |
 | ----- | ---------------- | ------- |
-| Formatting | `golangci-lint fmt --diff`, reported not rewritten | commit, CI |
+| Formatting | rewritten and restaged on commit, reported with `--diff` in CI | commit, CI |
 | Lint | 13 linters on top of the standard set; `godox` on protected branches | commit, CI |
 | Vulnerabilities | `govulncheck`, limited to symbols this code reaches | CI |
 | Unit tests | race detector on, **80% coverage floor** | push, CI |
@@ -131,6 +131,13 @@ aws sns subscribe --topic-arn "$ALARM_TOPIC_ARN" \
   --protocol email --notification-endpoint you@example.com
 ```
 
+The key is resolved at deploy time, so it ends up in the rendered
+CloudFormation template and in the function's environment: whoever can read the
+stack or the Lambda configuration can read the key. That is the price of a
+shared secret in an environment variable, and rotating it is a deploy. Read the
+parameter at cold start instead, or move the check to a Lambda authorizer, if
+the value has to stay inside Parameter Store.
+
 The API reference is published to GitHub Pages from `main`; turn Pages on with
 Settings → Pages → Source: GitHub Actions, or that workflow fails.
 
@@ -168,8 +175,11 @@ lambda/public     health and read-only endpoints
 internal/config   environment-backed settings
 internal/httpx    router, JSON responses, errors, middlewares, Lambda adapter
 internal/item     model, DynamoDB repository, use cases
+internal/awsx     the AWS SDK clients
 serverless/       function definitions, DynamoDB table, alarms, stage files
 tasks/            build, deploy, local, codegen and documentation tasks
+docs/             OpenAPI general information, generated specification
+tools/localdb     creates the items table in DynamoDB Local
 e2e/              Playwright tests
 ```
 
