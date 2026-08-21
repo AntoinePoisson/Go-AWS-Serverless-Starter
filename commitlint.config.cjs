@@ -1,6 +1,5 @@
-// The type list below and the changelog-sections of the Release Please config
-// are the same list: letting them drift means a commit that lints locally and
-// then vanishes from the changelog.
+// Keep this list in sync with changelog-sections in the Release Please config,
+// or a commit lints fine here and then vanishes from the changelog.
 module.exports = {
   extends: ['@commitlint/config-conventional'],
   rules: {
@@ -8,10 +7,10 @@ module.exports = {
       2,
       'always',
       [
-        'build', // dependencies, the Lambda packaging, the toolchain
+        'build', // dependencies, packaging, toolchain
         'chore', // hidden from the changelog
         'ci', // workflows, hooks, linters
-        'docs', // README and the OpenAPI annotations
+        'docs', // README and swag annotations
         'feat', // minor bump
         'fix', // patch bump
         'perf',
@@ -22,10 +21,8 @@ module.exports = {
       ],
     ],
 
-    // config-conventional caps the subject and every body/footer line at 100
-    // characters. A commit message is where the reasoning behind a change
-    // lives, so nothing here is worth truncating: the caps are off and the
-    // wrapping is left to whoever writes the message.
+    // config-conventional caps every line at 100 chars. The message is where
+    // the reasoning lives, so wrapping is left to whoever writes it.
     'header-max-length': [0, 'always', Infinity],
     'body-max-line-length': [0, 'always', Infinity],
     'footer-max-line-length': [0, 'always', Infinity],

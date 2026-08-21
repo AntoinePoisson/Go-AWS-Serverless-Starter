@@ -34,7 +34,7 @@ func captureContextLog(t *testing.T, h http.Handler) map[string]any {
 	return entry
 }
 
-func TestLogRequestIDReachesARecordWrittenByAHandler(t *testing.T) {
+func TestLogRequestIDReachesAHandlerRecord(t *testing.T) {
 	entry := captureContextLog(t, http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
 		slog.ErrorContext(r.Context(), "unhandled error", "error", "boom")
 	}))
@@ -52,7 +52,7 @@ func TestLogRequestIDReachesARecoveredPanic(t *testing.T) {
 	assert.Equal(t, "req-42", entry["request_id"], "Recover must sit under RequestID")
 }
 
-func TestLogRequestIDLeavesARecordWithoutARequestAlone(t *testing.T) {
+func TestLogRequestIDSkipsARecordWithoutARequest(t *testing.T) {
 	var buf bytes.Buffer
 	base := slog.NewJSONHandler(&buf, &slog.HandlerOptions{Level: slog.LevelDebug})
 	logger := slog.New(middleware.LogRequestID(base)).With("stage", "local")

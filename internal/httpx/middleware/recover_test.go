@@ -26,7 +26,7 @@ func TestRecoverTurnsPanicIntoInternalError(t *testing.T) {
 	assert.NotContains(t, rec.Body.String(), "boom")
 }
 
-func TestRecoverLeavesAStartedResponseAlone(t *testing.T) {
+func TestRecoverDoesNotTouchAStartedResponse(t *testing.T) {
 	handler := middleware.Recover(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(`{"items":[`))
@@ -43,7 +43,7 @@ func TestRecoverLeavesAStartedResponseAlone(t *testing.T) {
 	assert.Equal(t, `{"items":[`, rec.Body.String(), "an error document must not be appended to a started response")
 }
 
-func TestRecoverLeavesSuccessfulResponseUntouched(t *testing.T) {
+func TestRecoverPassesASuccessfulResponseThrough(t *testing.T) {
 	handler := middleware.Recover(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusAccepted)
 	}))

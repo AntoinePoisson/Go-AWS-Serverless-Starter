@@ -33,11 +33,8 @@ func main() {
 	}
 }
 
-// newHandler assembles the router and the middleware chain.
 func newHandler(healthHandler *health.Handler, itemsHandler *items.Handler) http.Handler {
-	// RequestID comes first so everything logged under it carries the
-	// identifier. Logger wraps Recover, not the reverse: a panic unwinding
-	// through Logger skips the line it writes after the handler returns.
+	// same chain as the api function, see lambda/api/main.go
 	return httpx.Chain(
 		httpx.NewRouter(healthHandler, itemsHandler),
 		middleware.RequestID,

@@ -9,7 +9,7 @@ import (
 
 // APIKeyHeader carries the shared secret expected by APIKey.
 //
-//nolint:gosec // G101 matches the name of the header, not a credential.
+//nolint:gosec // G101 matches the header name, not a credential.
 const APIKeyHeader = "X-Api-Key"
 
 // APIKey rejects requests whose API key header does not match key.

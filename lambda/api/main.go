@@ -33,15 +33,14 @@ func main() {
 	}
 }
 
-// newHandler assembles the router and the middleware chain.
 func newHandler(cfg *config.Config, itemsHandler *items.Handler) (http.Handler, error) {
 	if cfg.APIKey == "" {
 		return nil, errors.New("API_KEY is required")
 	}
 
-	// RequestID comes first so everything logged under it carries the
-	// identifier. Logger wraps Recover, not the reverse: a panic unwinding
-	// through Logger skips the line it writes after the handler returns.
+	// RequestID first, so everything logged below it carries the id. Logger has
+	// to wrap Recover and not the reverse: a panic unwinding through Logger
+	// skips the line it writes once the handler returns.
 	return httpx.Chain(
 		httpx.NewRouter(itemsHandler),
 		middleware.RequestID,

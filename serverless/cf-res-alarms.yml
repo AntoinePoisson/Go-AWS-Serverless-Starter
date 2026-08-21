@@ -1,20 +1,17 @@
-# The one alarm an API cannot do without: the stack answering 5xx. It watches
-# the HTTP API rather than the functions, so the failures no handler ever sees -
-# an integration timeout, a throttled or crashed Lambda, a bad response payload
-# - trip it too.
+# Alarms on the HTTP API rather than on the functions, so that the failures no
+# handler ever sees (integration timeout, throttled or crashed Lambda, bad
+# response payload) trip it too.
 Resources:
-  # Created empty on purpose: an address belongs to whoever runs the stage, not
-  # to the repository. Subscribe to the ARN below once, and every alarm added
-  # later publishes to the same place.
+  # No subscription here on purpose, an address belongs to whoever runs the
+  # stage. Subscribe to the ARN once and later alarms publish to the same topic.
   AlarmTopic:
     Type: AWS::SNS::Topic
     Properties:
       TopicName: ${self:service}-${self:provider.stage}-alarms
       DisplayName: ${self:service} ${self:provider.stage}
 
-  # `5xx` is the metric name of an HTTP API; a REST API publishes `5XXError`
-  # instead. Getting it wrong does not fail the deployment - it produces an
-  # alarm that sits in INSUFFICIENT_DATA forever, which is worse than no alarm.
+  # `5xx` is the HTTP API metric, a REST API publishes `5XXError` instead.
+  # Getting it wrong deploys fine and sits in INSUFFICIENT_DATA forever.
   ApiServerErrorsAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
@@ -32,13 +29,11 @@ Resources:
       EvaluationPeriods: 1
       Threshold: ${self:custom.stage.api5xxThreshold}
       ComparisonOperator: GreaterThanOrEqualToThreshold
-      # An API nobody called is not an API in trouble: without this the alarm
-      # would report INSUFFICIENT_DATA on every quiet stage.
+      # otherwise a quiet stage reports INSUFFICIENT_DATA
       TreatMissingData: notBreaching
       AlarmActions:
         - !Ref AlarmTopic
-      # Notified on the way back too - an alarm nobody sees recover is an alarm
-      # someone keeps chasing.
+      # notified on the way back too
       OKActions:
         - !Ref AlarmTopic
 

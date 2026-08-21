@@ -10,7 +10,7 @@ import (
 	"github.com/caarlos0/env/v11"
 )
 
-// Config holds the settings shared by every function of the service.
+// Config holds the settings shared by every function.
 type Config struct {
 	Stage            string `env:"STAGE" envDefault:"local"`
 	LogLevel         string `env:"LOG_LEVEL" envDefault:"info"`
@@ -31,8 +31,8 @@ func Load() (*Config, error) {
 }
 
 // SetupLogging installs a JSON slog handler at the configured level. Each
-// decorator wraps the handler built so far, which is how the request identifier
-// reaches every record without config knowing anything about HTTP.
+// decorator wraps the handler built so far, which is how the request id gets
+// into every record without this package knowing about HTTP.
 func (c *Config) SetupLogging(decorators ...func(slog.Handler) slog.Handler) {
 	var handler slog.Handler = slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{
 		Level: c.slogLevel(),

@@ -1,16 +1,15 @@
-# One config for both commands: `make fmt` runs the formatters, `make lint` the
-# linters. govet and staticcheck come with the standard set.
+# `make fmt` runs the formatters, `make lint` the linters.
 version: "2"
 
 linters:
   default: standard # errcheck, govet, ineffassign, staticcheck, unused
 
-  # godox is missing on purpose: CI and the hooks turn it on for the protected
-  # branches, where an unfinished thought matters.
+  # godox is missing on purpose, CI and the hooks turn it on for the protected
+  # branches only.
   enable:
     - bodyclose
     - copyloopvar
-    - errorlint # errors.Is/As over ==, which internal/item/errors.go relies on
+    - errorlint # internal/item/errors.go relies on errors.Is/As
     - gosec
     - misspell
     - nilerr
@@ -28,11 +27,11 @@ linters:
 
     gosec:
       excludes:
-        - G404 # math/rand is not used for anything security-bearing here
+        - G404 # math/rand is not used for anything security related here
 
     revive:
-      # `exported` keeps its defaults: checkPrivateReceivers would want a doc
-      # comment on every ResponseWriter method of an unexported type.
+      # exported keeps its defaults, checkPrivateReceivers would ask for a doc
+      # comment on every ResponseWriter method of an unexported type
       rules:
         - name: exported
         - name: context-as-argument
@@ -47,20 +46,19 @@ linters:
 
     sloglint:
       no-mixed-args: true
-      kv-only: true # slog.Info("msg", "key", value), never attribute helpers
-      static-msg: true # the message is the event, the value goes in a key
-      key-naming-case: snake # reads best in a CloudWatch Logs Insights query
+      kv-only: true # slog.Info("msg", "key", value), no attribute helpers
+      static-msg: true # the message is the event, values go in keys
+      key-naming-case: snake # easier to query in CloudWatch Logs Insights
 
     testifylint:
       disable:
-        # The recover test asserts on a truncated body, which JSONEq cannot
-        # parse.
+        # the recover test asserts on a truncated body, JSONEq cannot parse it
         - encoded-compare
 
     staticcheck:
       checks:
         - all
-        - -ST1000 # a package comment on every package is a library convention
+        - -ST1000 # a package comment everywhere is a library convention
 
   exclusions:
     generated: lax
@@ -76,7 +74,7 @@ linters:
           - gosec
           - noctx
 
-      # docs/ declares no symbol, only swag annotations.
+      # docs/ declares no symbol, only swag annotations
       - path: ^docs/
         linters:
           - revive

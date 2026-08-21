@@ -16,7 +16,7 @@ import (
 	"github.com/AntoinePoisson/go-aws-serverless-starter/internal/httpx"
 )
 
-// Case describes a single handler test case.
+// Case is one handler test case.
 type Case struct {
 	Name       string
 	Method     string
@@ -28,7 +28,7 @@ type Case struct {
 	Check      func(t *testing.T, res *http.Response)
 }
 
-// Run executes every case against a router holding only the handler under test.
+// Run plays every case against a router holding only the handler under test.
 func Run(t *testing.T, cases []Case) {
 	t.Helper()
 

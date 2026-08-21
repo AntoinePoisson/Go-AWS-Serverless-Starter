@@ -3,16 +3,16 @@ logLevel: info
 logRetentionInDays: 14
 pointInTimeRecovery: true
 
-# Between the two: a release is rehearsed here, a handful of 5xx is a finding.
+# in between, releases are rehearsed here
 api5xxThreshold: 5
 
-# Mirrors prod so a release is rehearsed under the same constraints.
+# same as prod, so a release is rehearsed under the same constraints
 tableDeletionPolicy: Retain
 
-# Replace with the origins allowed to call the API.
+# replace with the origins allowed to call the API
 corsOrigins:
   - https://example.com
 
-# Read from SSM. DEPLOY_API_KEY overrides it, which is what lets `make package`
-# render without AWS credentials.
+# From SSM. DEPLOY_API_KEY overrides it so `make package` can render without
+# AWS credentials.
 apiKey: ${env:DEPLOY_API_KEY, ssm:/${self:service}/preprod/api-key}

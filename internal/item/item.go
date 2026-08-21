@@ -1,10 +1,10 @@
-// Package item implements the resource exposed by the service: its model, its
-// DynamoDB repository and the use cases on top of it.
+// Package item implements the resource this service exposes: model, DynamoDB
+// repository and the use cases on top.
 package item
 
 import "time"
 
-// Item is the resource stored in DynamoDB and returned by the API.
+// Item is what we store in DynamoDB and return from the API.
 type Item struct {
 	ID        string            `json:"id" dynamodbav:"id"`
 	Name      string            `json:"name" dynamodbav:"name"`

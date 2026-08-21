@@ -30,7 +30,7 @@ func (e *Error) Error() string {
 // HandlerFunc is an http.HandlerFunc allowed to return an error.
 type HandlerFunc func(http.ResponseWriter, *http.Request) error
 
-// Handle adapts a HandlerFunc to http.HandlerFunc and renders returned errors.
+// Handle adapts a HandlerFunc to http.HandlerFunc and renders its errors.
 func Handle(h HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if err := h(w, r); err != nil {
@@ -39,8 +39,8 @@ func Handle(h HandlerFunc) http.HandlerFunc {
 	}
 }
 
-// WriteError renders err as a JSON response. Errors that are not an *Error are
-// logged and reported as an internal error.
+// WriteError renders err as JSON. Anything that is not an *Error gets logged
+// and reported as an internal error.
 func WriteError(w http.ResponseWriter, r *http.Request, err error) {
 	var httpErr *Error
 	if !errors.As(err, &httpErr) {

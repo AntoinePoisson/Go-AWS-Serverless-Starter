@@ -1,12 +1,10 @@
 name: Documentation
 
-# docs/api.html is generated and not committed (see .gitignore), so outside a
-# clone the only way to read the reference was to download a CI artifact. This
-# publishes the one built from main, at a URL a link can point at.
+# Publishes the API reference built from main. docs/api.html is generated and
+# git-ignored, so without this the only way to read it is a CI artifact.
 #
-# It needs Pages turned on with Settings -> Pages -> Source: GitHub Actions.
-# Until that is done the deployment step fails - the job says so rather than
-# publishing nothing quietly.
+# Needs Pages enabled: Settings > Pages > Source: GitHub Actions. Until then the
+# deploy step fails.
 on:
   push:
     branches: [main]
@@ -17,8 +15,8 @@ permissions:
   pages: write
   id-token: write
 
-# One publication at a time, and never cancelled halfway: an interrupted
-# deploy-pages leaves the Pages deployment in progress until it times out.
+# Never cancel halfway: an interrupted deploy-pages stays in progress until it
+# times out.
 concurrency:
   group: pages
   cancel-in-progress: false
@@ -50,9 +48,8 @@ jobs:
       - name: Install the documentation tooling
         run: npm ci
 
-      # Regenerated rather than read from the tree: the CI job of the same
-      # commit already fails when the two disagree, so this cannot publish a
-      # specification the annotations do not describe.
+      # Regenerated instead of read from the tree. CI already fails on the same
+      # commit when the two disagree.
       - name: Regenerate the specification
         run: |
           go tool swag init --v3.1 -ot yaml --parseInternal \
@@ -64,8 +61,7 @@ jobs:
       - name: Render the reference
         run: npx --no-install redocly build-docs docs/openapi.yaml -o docs/api.html
 
-      # A Pages site serves index.html at its root, and the reference is the
-      # whole site.
+      # the reference is the whole site, so it has to be index.html
       - name: Assemble the site
         run: |
           mkdir -p site

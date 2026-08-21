@@ -7,8 +7,8 @@ import (
 	"github.com/AntoinePoisson/go-aws-serverless-starter/internal/httpx"
 )
 
-// HTTPError maps a service error to its HTTP representation. Errors that are
-// not part of the domain are returned untouched and reported as a 500.
+// HTTPError maps a service error to its HTTP form. Anything outside the domain
+// comes back untouched and ends up a 500.
 func HTTPError(err error) error {
 	switch {
 	case err == nil:

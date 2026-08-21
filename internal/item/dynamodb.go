@@ -15,13 +15,13 @@ import (
 
 var _ Repository = (*DynamoDBRepository)(nil)
 
-// DynamoDBRepository stores items in a single DynamoDB table keyed by id.
+// DynamoDBRepository stores items in one table, keyed by id.
 type DynamoDBRepository struct {
 	client DynamoDBAPI
 	table  string
 }
 
-// NewDynamoDBRepository returns a repository writing to the configured table.
+// NewDynamoDBRepository returns a repository over the configured table.
 func NewDynamoDBRepository(client DynamoDBAPI, cfg *config.Config) *DynamoDBRepository {
 	return &DynamoDBRepository{client: client, table: cfg.ItemsTable}
 }
@@ -80,7 +80,7 @@ func (r *DynamoDBRepository) Delete(ctx context.Context, id string) error {
 	return nil
 }
 
-// List returns up to limit items. The scan is unordered.
+// List returns up to limit items, in no particular order.
 func (r *DynamoDBRepository) List(ctx context.Context, limit int32) ([]Item, error) {
 	out, err := r.client.Scan(ctx, &dynamodb.ScanInput{
 		TableName: aws.String(r.table),

@@ -18,8 +18,8 @@ import (
 
 const readHeaderTimeout = 10 * time.Second
 
-// Serve runs h as a Lambda function when the process runs on Lambda, and as a
-// plain HTTP server otherwise.
+// Serve runs h as a Lambda function on Lambda, and as a plain HTTP server
+// anywhere else.
 func Serve(h http.Handler, addr string) error {
 	if os.Getenv("AWS_LAMBDA_FUNCTION_NAME") == "" {
 		slog.Info("listening", "addr", addr)
@@ -91,8 +91,7 @@ func newRequest(ctx context.Context, event events.APIGatewayV2HTTPRequest) (*htt
 	return req, nil
 }
 
-// recorder captures what a handler writes so it can be turned into a Lambda
-// response.
+// recorder captures what a handler writes, to turn it into a Lambda response.
 type recorder struct {
 	header http.Header
 	body   bytes.Buffer
@@ -101,8 +100,8 @@ type recorder struct {
 
 func (r *recorder) Header() http.Header { return r.header }
 
-// Write mirrors net/http and infers the content type from the first bytes when
-// the handler set none, which also decides how the body is encoded.
+// Write mirrors net/http and sniffs the content type when the handler set
+// none. That also decides how the body is encoded.
 func (r *recorder) Write(b []byte) (int, error) {
 	if r.header.Get("Content-Type") == "" {
 		r.header.Set("Content-Type", http.DetectContentType(b))
@@ -148,8 +147,8 @@ func (r *recorder) response() events.APIGatewayV2HTTPResponse {
 	}
 }
 
-// isTextual reports whether a content type survives being carried as a plain
-// string. Anything else has to reach API Gateway base64 encoded.
+// isTextual reports whether a content type survives as a plain string.
+// Anything else has to reach API Gateway base64 encoded.
 func isTextual(contentType string) bool {
 	mediaType, _, err := mime.ParseMediaType(contentType)
 	if err != nil {

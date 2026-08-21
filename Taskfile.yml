@@ -26,16 +26,14 @@ tasks:
       - go tool golangci-lint fmt
 
   lint:
-    # govet and staticcheck are part of the linter set in .golangci.yml, so
-    # there is nothing left for a separate `go vet` step to catch.
+    # no separate `go vet`, govet is part of the set in .golangci.yml
     desc: Run golangci-lint
     cmds:
       - go tool golangci-lint run ./...
 
   test:
     desc: Run the unit tests with coverage
-    # -coverpkg to match what CI measures: most of the handler code is covered
-    # from another package's tests.
+    # -coverpkg to match what CI measures
     cmds:
       - mkdir -p .coverage
       - go test -race -coverpkg=./... -coverprofile=.coverage/report.out ./...
@@ -59,10 +57,9 @@ tasks:
     vars:
       FLOOR: 80
     cmds:
-      # Generated injectors, generated mocks and every main() come out first:
-      # nothing in them is worth a test, and their weight is what would let the
-      # code that IS worth one drift below the floor unnoticed. The `mode:` line
-      # matches none of the patterns, so it survives the filter.
+      # Injectors, mocks and main() come out first. Nothing in them is worth a
+      # test and their weight would hide the code that is. The `mode:` line
+      # matches none of the patterns so it survives the filter.
       - |
         set -eu
         grep -v -e 'wire_gen\.go:' -e '/mock_' -e '/main\.go:' \

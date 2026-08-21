@@ -5,7 +5,7 @@ const routes = [
   { method: "GET", path: "/public/items/{id}" },
 ];
 
-// Nothing on top of provider.environment: this function holds no secret.
+// nothing on top of provider.environment, this one holds no secret
 const environment = {};
 
 const permissions = [
