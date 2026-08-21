@@ -1,36 +1,33 @@
-# bootstrap-go-aws
+# Go AWS Serverless Starter
 
 [![CI](../../actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml)
 ![Go](https://img.shields.io/badge/go-1.25-00ADD8?logo=go&logoColor=white)
 ![Coverage](https://img.shields.io/badge/coverage-%E2%89%A580%25-brightgreen)
 ![Runtime](https://img.shields.io/badge/lambda-provided.al2023%20%C2%B7%20arm64-FF9900?logo=awslambda&logoColor=white)
+[![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 A serverless API in Go you can deploy on the first day and still trust on the
 hundredth: API Gateway HTTP API, two Lambda functions, one DynamoDB table.
 
-- **Runs anywhere without an emulator.** Both functions are plain `net/http`
-  servers; `internal/httpx` adapts the same binary to the Lambda runtime.
-- **Wired, not sketched.** Routing, middlewares (request id, structured logs,
-  recovery, API key), Wire dependency injection, DynamoDB repository, unit,
-  integration and end-to-end tests.
-- **A pipeline that says no.** Lint, tests, e2e, rendered infrastructure and a
-  drift check on every generated file — a red check stops the deploy on every
-  stage.
-- **Three stages, three branches, one command.** Conventional commits, Release
-  Please, deploy first and release after.
-- **Documentation that cannot drift.** `docs/openapi.yaml` is generated from the
-  annotations and CI fails when the committed file is stale.
+Use the template, run one command, replace the example resource with your own.
+The infrastructure, the quality gates, the generated documentation and the
+delivery pipeline are already wired — most examples stop at a deployed Lambda,
+this one starts there.
 
+## Architecture
+
+```mermaid
+flowchart TB
+    client([client]) --> gw["API Gateway · HTTP API, payload 2.0"]
+    gw -->|"POST · GET · DELETE /items<br/>X-Api-Key required"| api["api<br/>Go · arm64"]
+    gw -->|"GET /health<br/>GET /public/items/{id}"| pub["public<br/>Go · arm64"]
+    api -->|"Put · Get · Delete · Scan"| db[("DynamoDB<br/>items")]
+    pub -->|Get| db
+    ssm[["SSM · api-key"]] -.-> api
+    gw -.->|"5xx"| sns[["SNS · alarms"]]
 ```
-                     API Gateway (HTTP API, payload 2.0)
-                                    |
-                +-------------------+-------------------+
-          api (Go, arm64)                        public (Go, arm64)
-          X-Api-Key required                     no authentication
-                +-------------------+-------------------+
-                                    |
-                           DynamoDB table (items)
-```
+
+Each function carries its own IAM role, so the public one cannot write.
 
 ## Getting started
 
@@ -49,34 +46,34 @@ curl -s -X POST localhost:8080/items \
 ```
 
 `make init` asks for a Go module path and a service name, rewrites both across
-the repository, then resolves the dependencies, installs the git hooks and
-creates the local table. It is the only step that knows about the template —
-everything after it is your project. Run it directly to skip the prompts:
+the repository, restarts the version history, then installs the dependencies and
+the git hooks, regenerates the specification, prepares `.env` and creates the
+local table. It is the only step that knows about the template — everything
+after it is your project. Run it directly to skip the prompts:
 
 ```sh
 ./initialize.sh --module github.com/acme/orders-api --service orders-api
 ```
 
 The `items` resource is an example: a small CRUD that exercises every layer end
-to end. Replace it with your own resource and the plumbing stays.
+to end. Replace it with yours and the plumbing stays. `make help` lists every
+target; `.env.example` documents every setting and is what local runs and
+integration tests read.
 
-## Commands
+## What's inside
 
-```sh
-make help              # list every target
-make test              # unit tests, race detector and coverage
-make test-integration  # repository against DynamoDB Local
-make e2e               # Playwright, against the running functions
-make fmt lint          # one config for both, .golangci.yml
-make docs              # regenerate docs/openapi.yaml and docs/api.html
-make wire mocks        # regenerate the injectors and the mocks
-make deploy STAGE=alpha
-```
-
-Every route carries swag annotations; run `make docs` after touching one and
-commit `docs/openapi.yaml` with the change. A route also lives in
-`serverless/function-*.js` — the `infra` CI job catches what the two disagree
-on.
+| Area | Implementation |
+| ---- | -------------- |
+| Runtime | Go on AWS Lambda, `provided.al2023`, arm64 |
+| HTTP | Standard `net/http`, API Gateway payload v2 adapter |
+| Storage | DynamoDB, DynamoDB Local for development |
+| Injection | Google Wire, generated injectors |
+| Documentation | OpenAPI generated from the annotations, validated by Redocly |
+| Tests | `go test` with the race detector, DynamoDB Local, Playwright |
+| Infrastructure | Serverless Framework, one IAM role per function |
+| Monitoring | CloudWatch alarm on the API Gateway 5xx, one SNS topic per stage |
+| Delivery | GitHub Actions, OIDC, artifact promotion |
+| Releases | Conventional Commits and Release Please |
 
 ## Quality gates
 
@@ -96,13 +93,72 @@ run locally, before the code leaves the machine.
 | Codegen drift | Wire injectors and mocks regenerated and diffed | push |
 | Infrastructure | all three stages rendered to CloudFormation | CI |
 
-Coverage is measured with `-coverpkg`, so a package covered by another
-package's tests counts, and excludes generated files and the two `main()`.
-Below 80% the job fails rather than warns.
+Coverage is measured with `-coverpkg`, so a package covered by another package's
+tests counts, and excludes the generated code and every `main()`. Below 80% the
+job fails rather than warns — `make cover` gives the same verdict locally.
 
-Deployments authenticate through OIDC, each function carries its own IAM role,
-and the artifacts that ship are the very zips the checks ran against — never a
-rebuild.
+## Stages and delivery
+
+One branch per stage. A push deploys once every check passes, and the release
+job only runs after a successful deploy, so a tag can never point at code that
+was never shipped. The artifacts that ship are the very zips the checks ran
+against, never a rebuild.
+
+| Branch | Deploys to | Releases |
+| ------ | ---------- | -------- |
+| `dev`  | `alpha`    | — |
+| `main` | `preprod`  | prereleases `vX.Y.Z-pre.N` |
+| `prod` | `prod`     | stable `vX.Y.Z` |
+
+Stages are declared in `serverless/stage/`; add a file there to add one. `alpha`
+is throwaway — verbose logs, CORS open, table dropped with the stack. `preprod`
+mirrors `prod`, so a release is rehearsed under the same constraints.
+
+Deployment is opt-in, so a repository with no AWS account behind it stops after
+the checks instead of failing. To turn it on, set the repository variables
+`DEPLOY_ENABLED` to `true` and `AWS_REGION`, and the repository secret
+`AWS_DEPLOY_ROLE_ARN` — the role CI assumes through OIDC. Production approval
+belongs in the `prod` GitHub Environment as a required reviewer.
+
+Two things per stage before the first deploy: the API key it reads from SSM, and
+a subscriber on the alarm topic the stack creates — its ARN is the
+`AlarmTopicArn` output.
+
+```sh
+aws ssm put-parameter --name /go-aws-serverless-starter/alpha/api-key \
+  --type SecureString --value "$(openssl rand -hex 32)"
+aws sns subscribe --topic-arn "$ALARM_TOPIC_ARN" \
+  --protocol email --notification-endpoint you@example.com
+```
+
+The API reference is published to GitHub Pages from `main`; turn Pages on with
+Settings → Pages → Source: GitHub Actions, or that workflow fails.
+
+Before your first release: commits must follow
+[Conventional Commits](https://www.conventionalcommits.org), which `commitlint`
+enforces in a hook, and auto-merge must stay off on the release pull requests —
+a push authenticated with `GITHUB_TOKEN` triggers no workflow, so the tagged
+version would never deploy.
+
+## Design decisions
+
+- **Standard `net/http`.** The functions are ordinary HTTP applications, which
+  keeps local development and most tests independent from the Lambda runtime.
+- **Two functions, not one.** Public and authenticated routes deploy separately,
+  so their environment variables and IAM permissions stay isolated.
+- **A generated specification.** The contract comes from the handler
+  annotations and CI diffs it, at the cost of keeping the annotations next to
+  the HTTP layer.
+- **A branch per environment.** An opinionated default; replace it with
+  trunk-based delivery by rewiring the `resolve` job of the pipeline.
+
+## Not included
+
+This is a technical foundation, not an application platform. It deliberately
+leaves out end-user identity and Cognito, business authorization, asynchronous
+messaging, multi-tenant data modelling, custom domains and WAF, and distributed
+tracing. The API key middleware is a replaceable service-to-service boundary,
+not a user authentication system.
 
 ## Layout
 
@@ -112,69 +168,11 @@ lambda/public     health and read-only endpoints
 internal/config   environment-backed settings
 internal/httpx    router, JSON responses, errors, middlewares, Lambda adapter
 internal/item     model, DynamoDB repository, use cases
-serverless/       function definitions, DynamoDB table, stage files
+serverless/       function definitions, DynamoDB table, alarms, stage files
 tasks/            build, deploy, local, codegen and documentation tasks
 e2e/              Playwright tests
 ```
 
-## Configuration
+## License
 
-Every setting comes from the environment. Local runs and integration tests read
-the committed `.env.example`, then `.env` if it exists; a real environment
-variable wins over both. Deployment tasks read neither, so nothing local can
-reach a deployed stage.
-
-| Variable            | Default  | Description |
-| ------------------- | -------- | ----------- |
-| `ITEMS_TABLE`       | required | DynamoDB table name |
-| `API_KEY`           | —        | Secret expected by `api` in `X-Api-Key`; deployed stages read it from SSM |
-| `STAGE`             | `local`  | Reported by `/health` |
-| `LOG_LEVEL`         | `info`   | `debug`, `info`, `warn` or `error` |
-| `LISTEN_ADDR`       | `:8080`  | Local listen address, ignored on Lambda |
-| `DYNAMODB_ENDPOINT` | —        | Set to target DynamoDB Local |
-| `VERSION`           | `dev`    | Reported by `/health` |
-
-## Stages and releases
-
-One branch per stage. A push deploys once every check passes, and the release
-job only runs after a successful deploy, so a tag can never point at code that
-was never shipped.
-
-| Branch | Deploys to | Releases |
-| ------ | ---------- | -------- |
-| `dev`  | `alpha`    | — |
-| `main` | `preprod`  | prereleases `vX.Y.Z-pre.N` |
-| `prod` | `prod`     | stable `vX.Y.Z` |
-
-Stages are declared in `serverless/stage/`; add a file there to add one.
-`alpha` is throwaway — verbose logs, CORS open, table dropped with the stack.
-`preprod` mirrors `prod`, so a release is rehearsed under the same constraints.
-
-Before the first deploy, create the API key each stage reads from SSM:
-
-```sh
-aws ssm put-parameter --name /bootstrap-go-aws/alpha/api-key \
-  --type SecureString --value "$(openssl rand -hex 32)"
-```
-
-Deployment is opt-in, so the pipeline of a repository with no AWS account behind
-it stops after the checks instead of failing. To turn it on, set three things:
-
-| Kind | Name | Value |
-| ---- | ---- | ----- |
-| Repository variable | `DEPLOY_ENABLED` | `true` |
-| Repository variable | `AWS_REGION` | e.g. `eu-west-1` |
-| Repository secret | `AWS_DEPLOY_ROLE_ARN` | the role CI assumes through OIDC |
-
-Until `DEPLOY_ENABLED` is `true`, the deploy and release jobs are skipped and the
-run summary reports the stage and version that would have shipped. Production
-approval belongs in the `prod` GitHub Environment as a required reviewer.
-
-Two things to know before your first release: commits must follow
-[Conventional Commits](https://www.conventionalcommits.org), which `commitlint`
-enforces in a hook; and auto-merge must stay off on the release pull requests,
-because a push authenticated with `GITHUB_TOKEN` triggers no workflow — the
-tagged version would never deploy.
-
-Hooks are installed by `npm install`: formatting and lint on commit,
-regeneration, build and tests on push.
+MIT — see [LICENSE](LICENSE).
