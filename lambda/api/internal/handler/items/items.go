@@ -35,8 +35,8 @@ func (h *Handler) AddRoutes(mux *http.ServeMux) {
 // ListResponse is the body of GET /items. Exported so the generated schema is
 // named after it.
 type ListResponse struct {
-	Items []item.Item `json:"items"`
-	Count int         `json:"count"`
+	Items []item.Item `json:"items" validate:"required"`
+	Count int         `json:"count" validate:"required"`
 }
 
 // create stores an item.
@@ -45,7 +45,6 @@ type ListResponse struct {
 //	@Summary		Create an item
 //	@Description	Stores an item and returns it with its generated identifier.
 //	@Tags			items
-//	@Accept			json
 //	@Produce		json
 //	@Param			body	body		item.CreateInput	true	"Item to create"
 //	@Success		201		{object}	item.Item

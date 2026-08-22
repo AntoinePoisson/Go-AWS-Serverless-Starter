@@ -32,7 +32,12 @@ tasks:
     desc: Render docs/api.html from the specification
     deps: [openapi]
     cmds:
-      - npx --no-install redocly build-docs docs/openapi.yaml -o docs/api.html
+      - >-
+        npx --no-install redocly build-docs docs/openapi.yaml
+        --template docs/template.hbs
+        --templateOptions.metaDescription="A production-minded Go starter for AWS Lambda, API Gateway and DynamoDB."
+        --templateOptions.canonicalUrl="${DOCS_CANONICAL_URL:-https://antoinepoisson.github.io/Go-AWS-Serverless-Starter/}"
+        -o docs/api.html
 
   check:
     desc: Fail if the committed specification is not what the code produces

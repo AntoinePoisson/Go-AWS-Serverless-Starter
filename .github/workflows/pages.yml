@@ -52,12 +52,15 @@ jobs:
       # commit when the two disagree.
       - name: Regenerate the specification and render the reference
         run: make docs
+        env:
+          DOCS_CANONICAL_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
 
       # the reference is the whole site, so it has to be index.html
       - name: Assemble the site
         run: |
           mkdir -p site
           mv docs/api.html site/index.html
+          cp docs/favicon.svg site/favicon.svg
 
       - name: Configure Pages
         uses: actions/configure-pages@v6

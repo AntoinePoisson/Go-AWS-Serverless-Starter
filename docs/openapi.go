@@ -8,6 +8,8 @@ package docs
 
 //	@title			Go AWS Serverless Starter API
 //	@version		1.0
+//	@license.name	MIT
+//	@license.url	https://opensource.org/license/mit
 //	@description	Item resource served by two Lambda functions behind a single HTTP API.
 //	@description
 //	@description	The /items routes are authenticated with the X-Api-Key header and are
@@ -15,8 +17,7 @@ package docs
 //	@description	served by the `public` function. Both sit behind the same API Gateway,
 //	@description	which is why the public read is namespaced under /public.
 //	@description
-//	@description				Errors carry a JSON body of the shape {"code": "...", "message": "..."},
-//	@description				except for the 404 and 405 produced by the router itself.
+//	@description				Errors carry a JSON body of the shape {"code": "...", "message": "..."}.
 //
 //	@externalDocs.url			https://github.com/AntoinePoisson/go-aws-serverless-starter
 //	@externalDocs.description	Source repository and README

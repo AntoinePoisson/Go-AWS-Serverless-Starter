@@ -39,9 +39,13 @@ var _ ServiceAPI = (*Service)(nil)
 
 // CreateInput is the payload accepted by Service.Create.
 type CreateInput struct {
-	Name     string            `json:"name"`
-	Tags     []string          `json:"tags"`
-	Metadata map[string]string `json:"metadata"`
+	// Name is required, trimmed before storage and limited to 200 characters.
+	Name string `json:"name" validate:"required,max=200" example:"first item"`
+	// Tags accepts at most 20 values of at most 50 characters each.
+	Tags []string `json:"tags" validate:"max=20" maxLength:"50" example:"demo,starter"`
+	// Metadata accepts at most 20 entries; keys are limited to 100 characters
+	// and values to 1,000 characters.
+	Metadata map[string]string `json:"metadata" example:"owner:platform"`
 }
 
 // Service implements the item use cases over a Repository.

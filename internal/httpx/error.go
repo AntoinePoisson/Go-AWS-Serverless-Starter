@@ -10,8 +10,8 @@ import (
 // Error is an error carrying the status code to return to the client.
 type Error struct {
 	Status  int    `json:"-"`
-	Code    string `json:"code"`
-	Message string `json:"message"`
+	Code    string `json:"code" validate:"required" example:"not_found"`
+	Message string `json:"message" validate:"required" example:"item not found"`
 }
 
 // Errorf builds an Error with a formatted message.

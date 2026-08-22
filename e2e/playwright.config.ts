@@ -1,9 +1,12 @@
 import { defineConfig } from "@playwright/test";
 
 // Both functions are plain HTTP servers, so Playwright can run them itself.
-// Pointing E2E_API_URL at something already running (a deployed stage, or a
-// `make run-api` in another shell) skips that and tests what is there instead.
-const managed = !process.env.E2E_API_URL && !process.env.E2E_PUBLIC_URL;
+const hasExternalAPI = Boolean(process.env.E2E_API_URL);
+const hasExternalPublic = Boolean(process.env.E2E_PUBLIC_URL);
+if (hasExternalAPI !== hasExternalPublic) {
+  throw new Error("E2E_API_URL and E2E_PUBLIC_URL must be set together");
+}
+const managed = !hasExternalAPI;
 
 // `port` and not `url`: every route of the api function answers 401 without a
 // key, and Playwright waits for a response under 400.

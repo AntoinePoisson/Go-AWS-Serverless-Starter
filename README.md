@@ -1,7 +1,8 @@
 # Go AWS Serverless Starter
 
 [![CI](../../actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml)
-![Go](https://img.shields.io/badge/go-1.25-00ADD8?logo=go&logoColor=white)
+[![OpenAPI Live](https://img.shields.io/badge/docs-OpenAPI%20reference-85EA2D?logo=openapiinitiative&logoColor=white)](https://antoinepoisson.github.io/Go-AWS-Serverless-Starter/)
+![Go](https://img.shields.io/badge/go-1.26.6-00ADD8?logo=go&logoColor=white)
 ![Coverage](https://img.shields.io/badge/coverage-%E2%89%A580%25-brightgreen)
 ![Runtime](https://img.shields.io/badge/lambda-provided.al2023%20%C2%B7%20arm64-FF9900?logo=awslambda&logoColor=white)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
@@ -31,7 +32,7 @@ Each function carries its own IAM role, so the public one cannot write.
 
 ## Getting started
 
-Needs Go 1.25, Node.js 22 and Docker.
+Needs Go 1.26.6, Node.js 22 and Docker.
 
 ```sh
 make init          # make the template yours, then install and start everything
@@ -71,7 +72,7 @@ integration tests read.
 | Documentation | OpenAPI generated from the annotations, validated by Redocly |
 | Tests | `go test` with the race detector, DynamoDB Local, Playwright |
 | Infrastructure | Serverless Framework, one IAM role per function |
-| Monitoring | CloudWatch alarm on the API Gateway 5xx, one SNS topic per stage |
+| Monitoring | API Gateway access logs, 5xx alarm and one SNS topic per stage |
 | Delivery | GitHub Actions, OIDC, artifact promotion |
 | Releases | Conventional Commits and Release Please |
 
@@ -85,7 +86,7 @@ run locally, before the code leaves the machine.
 | ----- | ---------------- | ------- |
 | Formatting | rewritten and restaged on commit, reported with `--diff` in CI | commit, CI |
 | Lint | 13 linters on top of the standard set; `godox` on protected branches | commit, CI |
-| Vulnerabilities | `govulncheck`, limited to symbols this code reaches | CI |
+| Vulnerabilities | reachable Go symbols and advisory-specific Node tooling audit | CI |
 | Unit tests | race detector on, **80% coverage floor** | push, CI |
 | Integration | the repository against a real DynamoDB | CI |
 | End-to-end | Playwright against both functions, wired to DynamoDB | CI |
@@ -138,8 +139,8 @@ shared secret in an environment variable, and rotating it is a deploy. Read the
 parameter at cold start instead, or move the check to a Lambda authorizer, if
 the value has to stay inside Parameter Store.
 
-The API reference is published to GitHub Pages from `main`; turn Pages on with
-Settings → Pages → Source: GitHub Actions, or that workflow fails.
+The OpenAPI reference badge at the top is published to GitHub Pages from
+`main`.
 
 Before your first release: commits must follow
 [Conventional Commits](https://www.conventionalcommits.org), which `commitlint`
@@ -166,6 +167,10 @@ leaves out end-user identity and Cognito, business authorization, asynchronous
 messaging, multi-tenant data modelling, custom domains and WAF, and distributed
 tracing. The API key middleware is a replaceable service-to-service boundary,
 not a user authentication system.
+
+The example list deliberately uses one bounded DynamoDB `Scan` without a
+cursor. It keeps the demo readable; replace it with a paginated `Query` and an
+index shaped around your access pattern when the example becomes real data.
 
 ## Layout
 
