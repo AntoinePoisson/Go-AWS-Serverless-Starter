@@ -1,3 +1,11 @@
+# Redocly configuration. It lives here rather than at the repository root
+# because everything it governs is in this directory, and the root already
+# carries enough tool configuration. Every caller passes --config, see the lint
+# task in tasks/docs.yml.
+#
+# Only linting is configured here. The rendering options are flags on the
+# build-docs call in tasks/docs.yml, so the whole pipeline reads in one place.
+#
 # Some rules are downgraded to warnings, so the gate is the validity of the
 # spec rather than its completeness. Promote them back as annotations fill in.
 extends:
@@ -5,7 +13,7 @@ extends:
 
 apis:
   main:
-    root: docs/openapi.yaml
+    root: openapi.yaml
 
 rules:
   # An operation that forgot @Security would document itself as open, hence the

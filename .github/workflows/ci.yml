@@ -226,10 +226,10 @@ jobs:
       - name: Fail if the committed specification is stale
         run: make docs-check
 
-      # --no-install: bare npx silently downloads the latest release instead of
-      # failing when node_modules is missing.
+      # Through make so the --config pointing at docs/redocly.yaml is written
+      # once, in tasks/docs.yml.
       - name: Lint the specification
-        run: npx --no-install redocly lint docs/openapi.yaml
+        run: make docs-lint
 
       - name: Render the reference
         run: make docs

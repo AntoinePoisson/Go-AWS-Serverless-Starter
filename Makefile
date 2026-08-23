@@ -2,7 +2,7 @@ TASK ?= $(shell command -v task 2>/dev/null || echo 'go run github.com/go-task/t
 STAGE ?= alpha
 
 .DEFAULT_GOAL := help
-.PHONY: help init build build-host test test-integration cover fmt lint vuln tidy wire mocks docs docs-check package deploy deploy-fn remove db db-stop run-api run-public e2e demo clean
+.PHONY: help init build build-host test test-integration cover fmt lint vuln tidy wire mocks docs docs-lint docs-check package deploy deploy-fn remove db db-stop run-api run-public e2e demo clean
 
 help: ## Show the available targets
 	@grep -hE '^[a-z0-9-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -46,6 +46,9 @@ mocks: ## Regenerate the mocks
 
 docs: ## Regenerate the OpenAPI specification and the rendered reference
 	@$(TASK) docs:html
+
+docs-lint: ## Validate the OpenAPI specification against docs/redocly.yaml
+	@$(TASK) docs:lint
 
 docs-check: ## Fail if the committed OpenAPI specification is out of date
 	@$(TASK) docs:check
