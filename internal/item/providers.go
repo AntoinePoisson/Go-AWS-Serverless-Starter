@@ -2,8 +2,8 @@ package item
 
 import "github.com/google/wire"
 
-// WireSet wires the DynamoDB-backed item service. Binding DynamoDBAPI to a
-// real client is up to each function.
+// WireSet is the DynamoDB-backed item service. Each function binds DynamoDBAPI
+// to a real client.
 var WireSet = wire.NewSet(
 	NewDynamoDBRepository,
 	wire.Bind(new(Repository), new(*DynamoDBRepository)),

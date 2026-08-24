@@ -7,7 +7,7 @@ const routes = [
   { method: "DELETE", path: "/items/{id}" },
 ];
 
-// merged into provider.environment, which holds what both functions share
+// merged into provider.environment (what both functions share)
 const environment = {
   API_KEY: "${self:custom.stage.apiKey}",
 };

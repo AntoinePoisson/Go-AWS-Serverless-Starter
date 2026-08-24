@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-// Logger writes one structured line per request, after the response.
+// Logger writes one line per request, after the handler returns.
 func Logger(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
@@ -19,9 +19,7 @@ func Logger(next http.Handler) http.Handler {
 			level = slog.LevelError
 		}
 
-		// No request_id here: the record carries the context, and LogRequestID
-		// puts the id on every record that does. Adding it twice writes the key
-		// twice in the same JSON object.
+		// Leave request_id to LogRequestID. Adding it here prints the key twice.
 		slog.Log(r.Context(), level, "request",
 			"method", r.Method,
 			"path", r.URL.Path,

@@ -3,7 +3,7 @@ logLevel: info
 logRetentionInDays: 30
 pointInTimeRecovery: true
 
-# one server error in production is one bug someone has to look at
+# one server error in prod is one bug someone has to look at
 api5xxThreshold: 1
 
 # kept around, so `serverless remove` cannot drop the data
@@ -13,6 +13,6 @@ tableDeletionPolicy: Retain
 corsOrigins:
   - https://example.com
 
-# From SSM. DEPLOY_API_KEY overrides it so `make package` can render without
-# AWS credentials.
+# From SSM. DEPLOY_API_KEY overrides it so `make package` can render
+# without AWS credentials.
 apiKey: ${env:DEPLOY_API_KEY, ssm:/${self:service}/prod/api-key}

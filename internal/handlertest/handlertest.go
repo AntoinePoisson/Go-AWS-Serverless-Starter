@@ -1,4 +1,4 @@
-// Package handlertest runs table-driven tests against HTTP handlers.
+// Package handlertest is table-driven tests against HTTP handlers.
 package handlertest
 
 import (
@@ -16,7 +16,7 @@ import (
 	"github.com/AntoinePoisson/go-aws-serverless-starter/internal/httpx"
 )
 
-// Case is one handler test case.
+// Case is one row.
 type Case struct {
 	Name       string
 	Method     string
@@ -28,7 +28,7 @@ type Case struct {
 	Check      func(t *testing.T, res *http.Response)
 }
 
-// Run plays every case against a router holding only the handler under test.
+// Run plays every case against a router that only has the handler under test.
 func Run(t *testing.T, cases []Case) {
 	t.Helper()
 
@@ -66,7 +66,7 @@ func Run(t *testing.T, cases []Case) {
 	}
 }
 
-// DecodeBody reads a JSON response body into v.
+// DecodeBody reads the JSON body into v.
 func DecodeBody(t *testing.T, res *http.Response, v any) {
 	t.Helper()
 	require.NoError(t, json.NewDecoder(res.Body).Decode(v))

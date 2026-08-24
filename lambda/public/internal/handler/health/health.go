@@ -1,4 +1,4 @@
-// Package health exposes the liveness endpoint of the service.
+// Package health is the liveness endpoint.
 package health
 
 import (
@@ -10,34 +10,33 @@ import (
 	"github.com/AntoinePoisson/go-aws-serverless-starter/internal/httpx"
 )
 
-// WireSet provides the handler.
+// WireSet is the handler.
 var WireSet = wire.NewSet(New)
 
-// Handler serves the health endpoint.
+// Handler is GET /health.
 type Handler struct {
 	stage   string
 	version string
 }
 
-// New returns a Handler reporting the running stage and version.
+// New reports the running stage and version.
 func New(cfg *config.Config) *Handler {
 	return &Handler{stage: cfg.Stage, version: cfg.Version}
 }
 
-// AddRoutes registers the health route.
+// AddRoutes registers GET /health.
 func (h *Handler) AddRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /health", h.get)
 }
 
-// Response is the body of GET /health. Exported so the generated schema is
-// named after it.
+// Response is GET /health. Exported so the schema keeps this name.
 type Response struct {
 	Status  string `json:"status" validate:"required" example:"ok"`
 	Stage   string `json:"stage" validate:"required" example:"prod"`
 	Version string `json:"version" validate:"required" example:"1.2.3+abc1234"`
 }
 
-// get reports that the function is alive, and which build answered.
+// get says we're up, and which build answered.
 //
 //	@Id				getHealth
 //	@Summary		Liveness, stage and version

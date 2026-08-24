@@ -1,4 +1,4 @@
-// Package middleware holds the HTTP middlewares the functions apply.
+// Package middleware is the HTTP middleware the functions share.
 package middleware
 
 import (
@@ -8,13 +8,12 @@ import (
 	"github.com/google/uuid"
 )
 
-// RequestIDHeader carries the request id in and out.
+// RequestIDHeader is how the request id travels in and out.
 const RequestIDHeader = "X-Request-Id"
 
 type requestIDKey struct{}
 
-// RequestID assigns an id to the request, reusing the incoming header when
-// there is one, and echoes it back.
+// RequestID assigns an id, reuses the incoming one if present, and echoes it.
 func RequestID(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id := r.Header.Get(RequestIDHeader)
@@ -27,7 +26,7 @@ func RequestID(next http.Handler) http.Handler {
 	})
 }
 
-// RequestIDFrom returns the id carried by ctx, or an empty string.
+// RequestIDFrom returns the id on ctx, or "".
 func RequestIDFrom(ctx context.Context) string {
 	id, _ := ctx.Value(requestIDKey{}).(string)
 	return id

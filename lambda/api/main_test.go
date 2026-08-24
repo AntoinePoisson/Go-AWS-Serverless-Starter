@@ -54,15 +54,15 @@ func TestNewHandlerServesAnAuthenticatedRequest(t *testing.T) {
 	assert.Equal(t, http.StatusOK, rec.Code)
 }
 
-// the request worth reading about is the one that crashed, and it is the one
-// we lose if Recover wraps Logger
+// the one request worth reading is the one that crashed. we lose it if
+// Recover wraps Logger
 func TestNewHandlerLogsARequestThatPanics(t *testing.T) {
 	service := mock_item.NewMockServiceAPI(gomock.NewController(t))
 	service.EXPECT().List(gomock.Any(), gomock.Any()).DoAndReturn(
 		func(context.Context, int32) ([]item.Item, error) { panic("boom") })
 
-	// the decorator main() installs through cfg.SetupLogging, which is what
-	// puts the request id on the records
+	// same decorator main() installs via SetupLogging, that's how the
+	// request id lands on the records
 	var buf bytes.Buffer
 	previous := slog.Default()
 	slog.SetDefault(slog.New(middleware.LogRequestID(slog.NewJSONHandler(&buf, nil))))

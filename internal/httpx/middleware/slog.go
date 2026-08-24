@@ -5,8 +5,8 @@ import (
 	"log/slog"
 )
 
-// LogRequestID wraps h so every record carries the request id from its
-// context, not just the lines Logger writes.
+// LogRequestID puts the request id on every record from this context,
+// not just the line Logger writes.
 func LogRequestID(h slog.Handler) slog.Handler {
 	return &requestIDHandler{Handler: h}
 }
@@ -20,8 +20,7 @@ func (h *requestIDHandler) Handle(ctx context.Context, record slog.Record) error
 	return h.Handler.Handle(ctx, record)
 }
 
-// Both have to rewrap. The embedded handler returns a bare one and would drop
-// the id from there on.
+// Rewrap both. The embedded handler hands back a bare one and we'd lose the id.
 func (h *requestIDHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
 	return &requestIDHandler{Handler: h.Handler.WithAttrs(attrs)}
 }

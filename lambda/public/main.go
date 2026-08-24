@@ -1,4 +1,4 @@
-// Command public serves the unauthenticated endpoints.
+// Command public is the unauthenticated endpoints.
 package main
 
 import (
@@ -34,7 +34,7 @@ func main() {
 }
 
 func newHandler(healthHandler *health.Handler, itemsHandler *items.Handler) http.Handler {
-	// same chain as the api function, see lambda/api/main.go
+	// same chain as api, minus the key. see lambda/api/main.go
 	return httpx.Chain(
 		httpx.NewRouter(healthHandler, itemsHandler),
 		middleware.RequestID,

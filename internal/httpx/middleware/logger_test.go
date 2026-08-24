@@ -48,9 +48,8 @@ func TestLoggerRaisesTheLevelOnServerErrors(t *testing.T) {
 	assert.Equal(t, "INFO", captureLog(t, http.StatusNotFound)["level"])
 }
 
-// LogRequestID already puts the id on every record that carries a request
-// context. Logger adding its own writes the key twice in the same JSON object:
-// still valid JSON, but a nuisance to query and a surprise to read.
+// LogRequestID already puts the id on every record. If Logger adds it too
+// the key shows up twice. Still valid JSON, annoying to query.
 func TestLoggerLeavesTheRequestIDToTheDecorator(t *testing.T) {
 	var buf bytes.Buffer
 	previous := slog.Default()

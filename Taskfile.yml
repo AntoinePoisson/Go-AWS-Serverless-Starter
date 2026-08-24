@@ -26,21 +26,20 @@ tasks:
       - go tool golangci-lint fmt
 
   lint:
-    # no separate `go vet`, govet is part of the set in .golangci.yml
+    # no separate `go vet`, govet is in .golangci.yml
     desc: Run golangci-lint
     cmds:
       - go tool golangci-lint run ./...
 
   vuln:
-    # Reachability analysis, so a vulnerable dependency this code never calls
-    # into is reported as unaffected instead of blocking the build.
+    # Reachability: a vuln we never call is reported as unused, not a blocker.
     desc: Report the known vulnerabilities this code can reach
     cmds:
       - go tool govulncheck ./...
 
   test:
     desc: Run the unit tests with coverage
-    # -coverpkg to match what CI measures
+    # -coverpkg, same as CI
     cmds:
       - mkdir -p .coverage
       - go test -race -coverpkg=./... -coverprofile=.coverage/report.out ./...
@@ -54,8 +53,8 @@ tasks:
 
   e2e:
     desc: Run the end-to-end tests
-    # Playwright starts both functions itself, they only need the settings the
-    # local runs read. The table has to exist before they answer, hence the dep.
+    # Playwright starts both functions. They just need the same env as a
+    # local run. Table has to exist first, hence the dep.
     dotenv: [".env", ".env.example"]
     deps: [local:db]
     cmds:
@@ -73,9 +72,9 @@ tasks:
     vars:
       FLOOR: 80
     cmds:
-      # Injectors, mocks and main() come out first. Nothing in them is worth a
-      # test and their weight would hide the code that is. The `mode:` line
-      # matches none of the patterns so it survives the filter.
+      # Drop injectors, mocks and main(). Nothing in them is worth a test
+      # and they'd hide the code that is. The `mode:` line matches none of
+      # the patterns so it survives the filter.
       - |
         set -eu
         grep -v -e 'wire_gen\.go:' -e '/mock_' -e '/main\.go:' \

@@ -14,8 +14,8 @@ import (
 	"github.com/AntoinePoisson/go-aws-serverless-starter/internal/httpx/middleware"
 )
 
-// captureContextLog installs the decorated handler, runs h behind the RequestID
-// middleware and returns the single record it wrote.
+// captureContextLog installs the decorator, runs h behind RequestID, returns
+// the one record it wrote.
 func captureContextLog(t *testing.T, h http.Handler) map[string]any {
 	t.Helper()
 

@@ -1,13 +1,12 @@
-# Redocly configuration. It lives here rather than at the repository root
-# because everything it governs is in this directory, and the root already
-# carries enough tool configuration. Every caller passes --config, see the lint
-# task in tasks/docs.yml.
+# Lives here rather than at the root: everything it governs is in this
+# directory, and the root already has enough tool config. Callers pass
+# --config, see the lint task in tasks/docs.yml.
 #
-# Only linting is configured here. The rendering options are flags on the
-# build-docs call in tasks/docs.yml, so the whole pipeline reads in one place.
+# Lint only. Render flags sit on the build-docs call in tasks/docs.yml
+# so the whole pipeline reads in one place.
 #
-# Some rules are downgraded to warnings, so the gate is the validity of the
-# spec rather than its completeness. Promote them back as annotations fill in.
+# A few rules are warnings so the gate is "is the spec valid", not
+# "is every annotation filled in". Promote them once they are.
 extends:
   - recommended
 
@@ -16,9 +15,9 @@ apis:
     root: openapi.yaml
 
 rules:
-  # An operation that forgot @Security would document itself as open, hence the
-  # error. Open routes are listed one by one so that opening one is a decision
-  # written down here. swag cannot emit `security: []`, so no annotation.
+  # An operation that forgot @Security would look open. Open routes are
+  # listed one by one so opening one is a decision written down here.
+  # swag cannot emit `security: []`, so no annotation for those.
   security-defined:
     severity: error
     exceptions:
@@ -30,8 +29,8 @@ rules:
   operation-operationId-unique: error
   no-invalid-media-type-examples: error
 
-  # The licence is the one of the project built from the template, not of the
-  # template. Declare it in docs/openapi.go and turn this into an error.
+  # Licence of the project built from the template, not of the template.
+  # Declare it in docs/openapi.go and turn this into an error.
   info-license: warn
 
   operation-summary: warn

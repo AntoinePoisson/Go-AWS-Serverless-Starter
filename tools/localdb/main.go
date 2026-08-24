@@ -1,4 +1,4 @@
-// Command localdb creates the items table in a local DynamoDB.
+// Command localdb creates the items table in DynamoDB Local.
 package main
 
 import (
@@ -16,9 +16,8 @@ import (
 	"github.com/AntoinePoisson/go-aws-serverless-starter/internal/config"
 )
 
-// `docker compose up -d` returns as soon as the container is started, a second
-// or two before DynamoDB Local accepts a connection. The SDK retries a network
-// error for about a second, which is not enough, so the first call waits here.
+// docker compose up -d returns before DynamoDB Local actually accepts
+// connections. The SDK retries for about a second, not enough, so we wait.
 const (
 	startupTimeout = 30 * time.Second
 	retryInterval  = 500 * time.Millisecond
@@ -54,8 +53,8 @@ func main() {
 
 var errTableExists = errors.New("table already exists")
 
-// createTable keeps trying until DynamoDB Local answers or ctx runs out, and
-// reports the last failure rather than the deadline.
+// createTable keeps trying until DynamoDB Local answers or ctx runs out.
+// Reports the last real error, not just the deadline.
 func createTable(ctx context.Context, client *dynamodb.Client, table string) error {
 	input := &dynamodb.CreateTableInput{
 		TableName:   aws.String(table),

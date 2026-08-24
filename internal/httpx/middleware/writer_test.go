@@ -10,7 +10,7 @@ import (
 	"github.com/AntoinePoisson/go-aws-serverless-starter/internal/httpx/middleware"
 )
 
-// A middleware must not cut a handler off from the writer underneath.
+// A middleware shouldn't cut the handler off from the writer underneath.
 func TestResponseControllerReachesTheWrappedWriter(t *testing.T) {
 	wrappers := map[string]func(http.Handler) http.Handler{
 		"Logger":  middleware.Logger,

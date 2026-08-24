@@ -21,12 +21,12 @@ type DynamoDBRepository struct {
 	table  string
 }
 
-// NewDynamoDBRepository returns a repository over the configured table.
+// NewDynamoDBRepository points at the configured table.
 func NewDynamoDBRepository(client DynamoDBAPI, cfg *config.Config) *DynamoDBRepository {
 	return &DynamoDBRepository{client: client, table: cfg.ItemsTable}
 }
 
-// Put writes the item, overwriting any existing one with the same id.
+// Put writes the item. Same id overwrites.
 func (r *DynamoDBRepository) Put(ctx context.Context, item *Item) error {
 	attributes, err := attributevalue.MarshalMap(item)
 	if err != nil {
@@ -42,7 +42,7 @@ func (r *DynamoDBRepository) Put(ctx context.Context, item *Item) error {
 	return nil
 }
 
-// Get returns the item with the given id, or ErrNotFound.
+// Get returns the item, or ErrNotFound.
 func (r *DynamoDBRepository) Get(ctx context.Context, id string) (*Item, error) {
 	out, err := r.client.GetItem(ctx, &dynamodb.GetItemInput{
 		TableName: aws.String(r.table),
@@ -62,7 +62,7 @@ func (r *DynamoDBRepository) Get(ctx context.Context, id string) (*Item, error) 
 	return &item, nil
 }
 
-// Delete removes the item with the given id, or returns ErrNotFound.
+// Delete removes the item, or returns ErrNotFound.
 func (r *DynamoDBRepository) Delete(ctx context.Context, id string) error {
 	_, err := r.client.DeleteItem(ctx, &dynamodb.DeleteItemInput{
 		TableName:           aws.String(r.table),
@@ -80,7 +80,7 @@ func (r *DynamoDBRepository) Delete(ctx context.Context, id string) error {
 	return nil
 }
 
-// List returns up to limit items, in no particular order.
+// List returns up to limit items, no particular order.
 func (r *DynamoDBRepository) List(ctx context.Context, limit int32) ([]Item, error) {
 	out, err := r.client.Scan(ctx, &dynamodb.ScanInput{
 		TableName: aws.String(r.table),

@@ -1,10 +1,10 @@
-# Records the README GIF from docs/demo.tape, in a throwaway clone and never in
-# place: the demo starts with initialize.sh, which rewrites the module path and
-# the service name of the checkout it runs in.
+# Records the README GIF from docs/demo.tape, in a throwaway clone, never
+# in place. The demo starts with initialize.sh, which rewrites the module
+# path and the service name of the checkout it runs in.
 version: "3"
 
 vars:
-  # under bin/, git-ignored and removed by `make clean`
+  # under bin/, gitignored, gone after `make clean`
   CLONE: bin/demo
 
 tasks:
@@ -23,8 +23,8 @@ tasks:
     cmds:
       - rm -rf {{ .CLONE }}
       - git clone --quiet . {{ .CLONE }}
-      # the tape from the working tree, not from HEAD, so iterating on it does
-      # not need one commit per take
+      # tape from the working tree, not HEAD, so iterating doesnt need a
+      # commit per take
       - cp docs/demo.tape {{ .CLONE }}/docs/demo.tape
       - cd {{ .CLONE }} && vhs docs/demo.tape
       # vhs optimises for fidelity, a README wants something that loads
