@@ -232,7 +232,7 @@ jobs:
         run: npx --no-install redocly lint docs/openapi.yaml
 
       - name: Render the reference
-        run: npx --no-install redocly build-docs docs/openapi.yaml -o docs/api.html
+        run: make docs
 
       # api.html is git-ignored, this is how you read it for a given commit
       - name: Upload the rendered reference
@@ -259,6 +259,13 @@ jobs:
 
       - name: Install the Serverless Framework
         run: npm ci
+
+      # Only the runtime dependencies gate the build. The Serverless v3 CLI is
+      # archived upstream and carries advisories with no fix, but it never
+      # reaches AWS: the Lambdas ship as Go binaries. Dependabot watches the dev
+      # toolchain instead, and govulncheck covers what actually runs in prod.
+      - name: Audit the runtime dependencies
+        run: npm run audit
 
       - name: Download the Lambda artifacts
         uses: actions/download-artifact@v8

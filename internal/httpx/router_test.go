@@ -34,6 +34,20 @@ func TestNewRouterRejectsUnknownMethod(t *testing.T) {
 	router.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/ping", nil))
 
 	assert.Equal(t, http.StatusMethodNotAllowed, rec.Code)
+	assert.Contains(t, rec.Header().Get("Allow"), http.MethodGet)
+	assert.Equal(t, "application/json", rec.Header().Get("Content-Type"))
+	assert.JSONEq(t, `{"code":"method_not_allowed","message":"method not allowed"}`, rec.Body.String())
+}
+
+func TestNewRouterRejectsUnknownPath(t *testing.T) {
+	router := httpx.NewRouter(stubHandler{})
+
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/unknown", nil))
+
+	assert.Equal(t, http.StatusNotFound, rec.Code)
+	assert.Equal(t, "application/json", rec.Header().Get("Content-Type"))
+	assert.JSONEq(t, `{"code":"not_found","message":"route not found"}`, rec.Body.String())
 }
 
 func TestChainAppliesMiddlewaresOutsideIn(t *testing.T) {

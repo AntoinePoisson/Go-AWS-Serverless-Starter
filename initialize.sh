@@ -15,6 +15,7 @@ cd "$(dirname "$0")"
 
 MODULE=""
 SERVICE=""
+MODULE_FROM_ARG=false
 DO_RENAME=true
 DO_SETUP=true
 DO_RESET_RELEASES=ask
@@ -60,6 +61,7 @@ while [ $# -gt 0 ]; do
 	case "$1" in
 	-m | --module)
 		MODULE=${2:-}
+		MODULE_FROM_ARG=true
 		shift 2
 		;;
 	-s | --service)
@@ -152,6 +154,7 @@ retitle_api() {
 
 if [ "$DO_RENAME" = true ]; then
 	if [ -z "$MODULE" ]; then
+		[ -t 0 ] || die "--module is required in non-interactive mode"
 		printf '%sModule path%s of the new project [%s]: ' "$BOLD" "$RESET" "$current_module"
 		read -r MODULE
 		MODULE=${MODULE:-$current_module}
@@ -165,9 +168,13 @@ if [ "$DO_RENAME" = true ]; then
 
 	if [ -z "$SERVICE" ]; then
 		default_service=${MODULE##*/}
-		printf '%sService name%s [%s]: ' "$BOLD" "$RESET" "$default_service"
-		read -r SERVICE
-		SERVICE=${SERVICE:-$default_service}
+		if [ "$MODULE_FROM_ARG" = false ] && [ -t 0 ]; then
+			printf '%sService name%s [%s]: ' "$BOLD" "$RESET" "$default_service"
+			read -r SERVICE
+			SERVICE=${SERVICE:-$default_service}
+		else
+			SERVICE=$default_service
+		fi
 	fi
 
 	# what CloudFormation, Lambda and npm all accept. anything else blows up at
@@ -227,12 +234,19 @@ reset_releases() {
 
 if [ "$DO_RENAME" = true ] && [ -f .release-please-config.json ]; then
 	if [ "$DO_RESET_RELEASES" = ask ]; then
-		printf '%sReset the version history%s (manifests to 0.0.0, empty changelogs)? [Y/n]: ' "$BOLD" "$RESET"
-		read -r answer
-		case "$answer" in
-		[Nn]*) DO_RESET_RELEASES=false ;;
-		*) DO_RESET_RELEASES=true ;;
-		esac
+		# Supplying --module is the non-interactive form advertised in the README:
+		# the service defaults to its last segment and a fresh project starts at
+		# 0.0.0. The explicit --keep-releases flag still wins when required.
+		if [ "$MODULE_FROM_ARG" = true ] || ! [ -t 0 ]; then
+			DO_RESET_RELEASES=true
+		else
+			printf '%sReset the version history%s (manifests to 0.0.0, empty changelogs)? [Y/n]: ' "$BOLD" "$RESET"
+			read -r answer
+			case "$answer" in
+			[Nn]*) DO_RESET_RELEASES=false ;;
+			*) DO_RESET_RELEASES=true ;;
+			esac
+		fi
 	fi
 	[ "$DO_RESET_RELEASES" = true ] && reset_releases
 fi

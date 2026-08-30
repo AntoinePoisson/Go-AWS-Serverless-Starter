@@ -32,9 +32,9 @@ func (h *Handler) AddRoutes(mux *http.ServeMux) {
 // Response is the body of GET /health. Exported so the generated schema is
 // named after it.
 type Response struct {
-	Status  string `json:"status"`
-	Stage   string `json:"stage"`
-	Version string `json:"version"`
+	Status  string `json:"status" validate:"required" example:"ok"`
+	Stage   string `json:"stage" validate:"required" example:"prod"`
+	Version string `json:"version" validate:"required" example:"1.2.3+abc1234"`
 }
 
 // get reports that the function is alive, and which build answered.

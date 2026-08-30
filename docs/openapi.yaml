@@ -3,50 +3,96 @@ components:
     health.Response:
       properties:
         stage:
+          example: prod
           type: string
         status:
+          example: ok
           type: string
         version:
+          example: 1.2.3+abc1234
           type: string
+      required:
+      - stage
+      - status
+      - version
       type: object
     httpx.Error:
       properties:
         code:
+          example: not_found
           type: string
         message:
+          example: item not found
           type: string
+      required:
+      - code
+      - message
       type: object
     item.CreateInput:
       properties:
         metadata:
           additionalProperties:
             type: string
+          description: |-
+            Metadata accepts at most 20 entries; keys are limited to 100 characters
+            and values to 1,000 characters.
+          example:
+            owner: platform
           type: object
         name:
+          description: Name is required, trimmed before storage and limited to 200
+            characters.
+          example: first item
+          maxLength: 200
           type: string
         tags:
+          description: Tags accepts at most 20 values of at most 50 characters each.
+          example:
+          - demo
+          - starter
           items:
+            maxLength: 50
             type: string
+          maxItems: 20
           type: array
           uniqueItems: false
+      required:
+      - name
       type: object
     item.Item:
       properties:
         createdAt:
+          example: "2026-08-27T10:00:00Z"
+          format: date-time
           type: string
         id:
+          example: 550e8400-e29b-41d4-a716-446655440000
+          format: uuid
           type: string
         metadata:
           additionalProperties:
             type: string
+          example:
+            owner: platform
           type: object
         name:
+          example: first item
+          maxLength: 200
           type: string
         tags:
+          example:
+          - demo
+          - starter
           items:
+            maxLength: 50
             type: string
+          maxItems: 20
           type: array
           uniqueItems: false
+      required:
+      - createdAt
+      - id
+      - name
       type: object
     items.ListResponse:
       properties:
@@ -57,6 +103,9 @@ components:
             $ref: '#/components/schemas/item.Item'
           type: array
           uniqueItems: false
+      required:
+      - count
+      - items
       type: object
   securitySchemes:
     ApiKeyAuth:
@@ -76,8 +125,10 @@ info:
     served by the `public` function. Both sit behind the same API Gateway,
     which is why the public read is namespaced under /public.
 
-    Errors carry a JSON body of the shape {"code": "...", "message": "..."},
-    except for the 404 and 405 produced by the router itself.
+    Errors carry a JSON body of the shape {"code": "...", "message": "..."}.
+  license:
+    name: MIT
+    url: https://opensource.org/license/mit
   title: Go AWS Serverless Starter API
   version: "1.0"
 openapi: 3.1.0
@@ -148,11 +199,9 @@ paths:
         content:
           application/json:
             schema:
-              oneOf:
-              - type: object
-              - $ref: '#/components/schemas/item.CreateInput'
-                description: Item to create
-                summary: body
+              $ref: '#/components/schemas/item.CreateInput'
+              description: Item to create
+              summary: body
         description: Item to create
         required: true
       responses:

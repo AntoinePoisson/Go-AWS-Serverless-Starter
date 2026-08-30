@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{title}}</title>
+    <meta name="description" content="{{templateOptions.metaDescription}}">
+    <link rel="canonical" href="{{templateOptions.canonicalUrl}}">
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="{{title}}">
+    <meta property="og:description" content="{{templateOptions.metaDescription}}">
+    <meta property="og:url" content="{{templateOptions.canonicalUrl}}">
+    <meta name="twitter:card" content="summary">
+
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+      }
+
+      .mobile-api-nav {
+        display: none;
+      }
+
+      @media (max-width: 767px) {
+        .mobile-api-nav {
+          background: #fff;
+          border-bottom: 1px solid #d9e2ec;
+          box-sizing: border-box;
+          display: block;
+          padding: 10px 16px;
+          position: sticky;
+          top: 0;
+          z-index: 10;
+        }
+
+        .mobile-api-nav summary {
+          color: #243b53;
+          cursor: pointer;
+          font: 600 15px/24px system-ui, sans-serif;
+          min-height: 24px;
+        }
+
+        .mobile-api-nav input {
+          border: 1px solid #bcccdc;
+          border-radius: 6px;
+          box-sizing: border-box;
+          font: 16px system-ui, sans-serif;
+          margin: 10px 0;
+          padding: 8px 10px;
+          width: 100%;
+        }
+
+        .mobile-api-links {
+          display: grid;
+          gap: 4px;
+          max-height: 45vh;
+          overflow: auto;
+        }
+
+        .mobile-api-links a {
+          color: #087f5b;
+          font: 14px/22px system-ui, sans-serif;
+          padding: 3px 0;
+          text-decoration: none;
+        }
+      }
+    </style>
+
+    {{{redocHead}}}
+    {{#unless disableGoogleFont}}
+      <link href="https://fonts.googleapis.com/css?family=Montserrat:300,400,700|Roboto:300,400,700" rel="stylesheet">
+    {{/unless}}
+  </head>
+  <body>
+    <details class="mobile-api-nav">
+      <summary>API menu</summary>
+      <input id="mobile-api-search" type="search" placeholder="Filter endpoints" aria-label="Filter endpoints">
+      <nav id="mobile-api-links" class="mobile-api-links" aria-label="API endpoints"></nav>
+    </details>
+
+    {{{redocHTML}}}
+
+    <script>
+      (() => {
+        const menu = document.querySelector('.mobile-api-nav');
+        const links = document.getElementById('mobile-api-links');
+        const search = document.getElementById('mobile-api-search');
+        const seen = new Set();
+
+        document.querySelectorAll('#redoc h2 > a[href^="#tag/"]').forEach((source) => {
+          if (seen.has(source.hash)) return;
+          seen.add(source.hash);
+
+          const heading = source.parentElement;
+          const label = heading.textContent.replace(source.textContent, '').trim();
+          const link = document.createElement('a');
+          link.href = source.hash;
+          link.textContent = label;
+          link.addEventListener('click', () => menu.removeAttribute('open'));
+          links.appendChild(link);
+        });
+
+        search.addEventListener('input', () => {
+          const query = search.value.trim().toLowerCase();
+          links.querySelectorAll('a').forEach((link) => {
+            link.hidden = query !== '' && !link.textContent.toLowerCase().includes(query);
+          });
+        });
+      })();
+    </script>
+  </body>
+</html>
