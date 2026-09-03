@@ -15,8 +15,22 @@
 
     <style>
       body {
+        /* Redoc styles its own components but never the body, which would
+           otherwise fall back to the browser default serif. Kept in sync with
+           the --theme.openapi.theme.typography.fontFamily flag in
+           tasks/docs.yml. */
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
         margin: 0;
         padding: 0;
+      }
+
+      /* Redoc paints its section headers ("AUTHORIZATIONS:", "QUERY
+         PARAMETERS") in #93999c, 2.89:1 on white. That colour is hard-coded in
+         the client bundle, so unlike the rest of the palette it cannot be set
+         through the --theme flags in tasks/docs.yml like the rest of the
+         palette. #redoc h5 outranks the generated class. */
+      #redoc h5 {
+        color: #667079;
       }
 
       .mobile-api-nav {
@@ -68,10 +82,15 @@
       }
     </style>
 
+    {{! Carries the Redoc bundle tag and the server-rendered stylesheet. The
+        bundle is render-blocking as emitted; tasks/docs.yml defers it
+        afterwards, see docs/optimize-html.mjs. }}
     {{{redocHead}}}
-    {{#unless disableGoogleFont}}
-      <link href="https://fonts.googleapis.com/css?family=Montserrat:300,400,700|Roboto:300,400,700" rel="stylesheet">
-    {{/unless}}
+
+    {{! No Google Fonts link on purpose. Its stylesheet blocked rendering for
+        ~1s and dragged two woff2 files onto the critical path for a font the
+        system stack already covers. The --theme flags in tasks/docs.yml set
+        the families to match. }}
   </head>
   <body>
     <details class="mobile-api-nav">
@@ -80,7 +99,10 @@
       <nav id="mobile-api-links" class="mobile-api-links" aria-label="API endpoints"></nav>
     </details>
 
-    {{{redocHTML}}}
+    {{! The reference is the page, so it is the main landmark. }}
+    <main>
+      {{{redocHTML}}}
+    </main>
 
     <script>
       (() => {
@@ -89,6 +111,8 @@
         const search = document.getElementById('mobile-api-search');
         const seen = new Set();
 
+        // Reads the server-rendered markup, which already carries the tag
+        // anchors, so it does not have to wait for Redoc to hydrate.
         document.querySelectorAll('#redoc h2 > a[href^="#tag/"]').forEach((source) => {
           if (seen.has(source.hash)) return;
           seen.add(source.hash);

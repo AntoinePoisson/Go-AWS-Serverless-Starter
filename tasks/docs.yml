@@ -26,18 +26,36 @@ tasks:
   lint:
     desc: Validate docs/openapi.yaml with Redocly
     cmds:
-      - npx --no-install redocly lint docs/openapi.yaml
+      # --no-install: bare npx silently downloads the latest release instead of
+      # failing when node_modules is missing. --config because the Redocly
+      # configuration sits next to the spec rather than at the repository root.
+      - npx --no-install redocly lint docs/openapi.yaml --config docs/redocly.yaml
 
   html:
     desc: Render docs/api.html from the specification
     deps: [openapi]
     cmds:
+      # --theme options are applied during the server-side render, so they
+      # land in the first paint instead of after hydration. No web font: the
+      # Google Fonts stylesheet blocked rendering for ~1s and pulled two woff2
+      # files onto the critical path for what the system stack already covers.
+      # The colours are the ones the defaults get wrong on contrast, see
+      # docs/template.hbs for the one case that has to stay CSS.
       - >-
         npx --no-install redocly build-docs docs/openapi.yaml
         --template docs/template.hbs
         --templateOptions.metaDescription="A production-minded Go starter for AWS Lambda, API Gateway and DynamoDB."
         --templateOptions.canonicalUrl="${DOCS_CANONICAL_URL:-https://antoinepoisson.github.io/Go-AWS-Serverless-Starter/}"
+        --theme.openapi.theme.typography.fontFamily='system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
+        --theme.openapi.theme.typography.headings.fontFamily='system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
+        --theme.openapi.theme.typography.code.fontFamily='ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace'
+        --theme.openapi.theme.typography.code.color='#c62828'
+        --theme.openapi.theme.typography.links.textDecoration=underline
+        --theme.openapi.theme.colors.responses.error.tabTextColor='#e8615c'
         -o docs/api.html
+      # Redocly emits the bundle as a render-blocking script even though the
+      # page is already server-rendered. See the file for what it rewrites.
+      - node docs/optimize-html.mjs docs/api.html
 
   check:
     desc: Fail if the committed specification is not what the code produces
