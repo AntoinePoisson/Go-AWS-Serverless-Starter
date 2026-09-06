@@ -1,4 +1,4 @@
-// Command api serves the authenticated CRUD API.
+// Command api is the authenticated CRUD API.
 package main
 
 import (
@@ -38,9 +38,9 @@ func newHandler(cfg *config.Config, itemsHandler *items.Handler) (http.Handler, 
 		return nil, errors.New("API_KEY is required")
 	}
 
-	// RequestID first, so everything logged below it carries the id. Logger has
-	// to wrap Recover and not the reverse: a panic unwinding through Logger
-	// skips the line it writes once the handler returns.
+	// RequestID first so everything below it has the id. Logger has to wrap
+	// Recover, not the other way: a panic going through Logger skips the line
+	// it writes after the handler returns.
 	return httpx.Chain(
 		httpx.NewRouter(itemsHandler),
 		middleware.RequestID,

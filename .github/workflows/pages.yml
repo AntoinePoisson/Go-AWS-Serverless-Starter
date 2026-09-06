@@ -1,10 +1,10 @@
 name: OpenAPI
 
-# Publishes the API reference built from main. docs/api.html is generated and
-# git-ignored, so without this the only way to read it is a CI artifact.
+# Publishes the API reference from main. api.html is generated and gitignored,
+# so without this the only way to read it is a CI artifact.
 #
-# Needs Pages enabled: Settings > Pages > Source: GitHub Actions. Until then the
-# deploy step fails.
+# Needs Pages enabled (Settings > Pages > Source: GitHub Actions).
+# Until then the deploy step fails.
 on:
   push:
     branches: [main]
@@ -15,8 +15,7 @@ permissions:
   pages: write
   id-token: write
 
-# Never cancel halfway: an interrupted deploy-pages stays in progress until it
-# times out.
+# Don't cancel halfway. An interrupted deploy-pages sits there until it times out.
 concurrency:
   group: pages
   cancel-in-progress: false
@@ -48,8 +47,7 @@ jobs:
       - name: Install the documentation tooling
         run: npm ci
 
-      # Regenerated instead of read from the tree. CI already fails on the same
-      # commit when the two disagree.
+      # Regenerated, not read from the tree. CI already fails if they disagree.
       - name: Regenerate the specification and render the reference
         run: make docs
         env:

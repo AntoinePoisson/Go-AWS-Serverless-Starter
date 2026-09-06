@@ -1,5 +1,5 @@
-# Git hooks, installed by `npm install`. Fast checks on commit, the real ones
-# on push. Anything that rewrites a file runs in a piped group so two commands
+# Git hooks, installed by `npm install`. Fast checks on commit, the heavy
+# ones on push. Anything that rewrites a file runs piped so two commands
 # never touch the same *.go at once.
 skip:
   - merge
@@ -9,7 +9,7 @@ pre-commit:
   parallel: true
 
   jobs:
-    # format then lint, never concurrently, both rewrite the same files
+    # format then lint, never at the same time, both rewrite the same files
     - name: go
       glob: "*.go"
       group:
@@ -19,13 +19,12 @@ pre-commit:
             run: go tool golangci-lint fmt {staged_files}
             stage_fixed: true
 
-          # Everything plus godox on the protected branches, new issues only
+          # Everything plus godox on the protected branches. New issues only
           # elsewhere, so inherited problems dont block the fix at hand.
           - name: lint
             run: |
               set -eu
-              # --show-current and not rev-parse HEAD, which points at no
-              # revision on the initial commit
+              # --show-current, not rev-parse HEAD (no revision on the first commit)
               branch=$(git branch --show-current)
 
               case "$branch" in
@@ -36,7 +35,7 @@ pre-commit:
               *)
                 dirs=$(printf '%s\n' {staged_files} | xargs -n1 dirname | sort -u)
 
-                # no remote ref means no usable merge base
+                # no remote ref, no usable merge base
                 for candidate in origin/dev origin/main; do
                   if git rev-parse --verify --quiet "$candidate" >/dev/null; then
                     echo "incremental lint on $branch (new issues since $candidate)"
@@ -52,8 +51,8 @@ pre-commit:
               esac
             stage_fixed: true
 
-    # Index check only, regeneration happens at pre-push. This catches staging
-    # a generator input without its output.
+    # Index check only, regen happens at pre-push. Catches staging a
+    # generator input without its output.
     - name: generated-staged
       run: |
         set -eu
@@ -65,16 +64,16 @@ pre-commit:
           fail=1
         }
 
-        # True when the staged diff touches anything but comments and blank
-        # lines. mockgen copies neither, so a reworded comment leaves the mock
-        # byte for byte identical and there is nothing to stage.
+        # True when the staged diff touches more than comments and blanks.
+        # mockgen copies neither, so a reworded comment leaves the mock
+        # identical and there's nothing to stage.
         touches_code() {
           git diff --cached -U0 -- "$1" |
             grep -E '^[+-]' | grep -vE '^(\+\+\+|---)' |
             grep -qvE '^[+-][[:space:]]*(//.*)?$'
         }
 
-        # an interface changed but its mock did not. same scope as `make mocks`
+        # interface changed, mock did not. same scope as `make mocks`
         for f in $(printf '%s\n' "$staged" | grep -E '^(internal|lambda)/.*api\.go$' | grep -v '/mock_' || true); do
           touches_code "$f" || continue
           dir=$(dirname "$f")
@@ -82,13 +81,13 @@ pre-commit:
           printf '%s\n' "$staged" | grep -qxF "$mock" || note "$f is staged, $mock is not - run 'make mocks'"
         done
 
-        # the dependency graph changed but the injector did not
+        # dependency graph changed, injector did not
         for f in $(printf '%s\n' "$staged" | grep -E 'lambda/[^/]+/wire\.go$' || true); do
           gen="$(dirname "$f")/wire_gen.go"
           printf '%s\n' "$staged" | grep -qxF "$gen" || note "$f is staged, $gen is not - run 'make wire'"
         done
 
-        # an annotation changed but the spec did not
+        # annotation changed, spec did not
         if git diff --cached -U0 -- '*.go' | grep -qE '^\+[[:space:]]*//[[:space:]]*@(Router|Success|Failure|Param|Header|Security|Id|Tags|Summary|Description|Accept|Produce|title|version|servers|tag|securityDefinitions)'; then
           printf '%s\n' "$staged" | grep -qxF 'docs/openapi.yaml' || note "a swag annotation changed but docs/openapi.yaml is not staged - run 'make docs'"
         fi
@@ -100,14 +99,14 @@ pre-commit:
       glob: "go.{mod,sum}"
       run: go mod tidy -diff
 
-# Everything here also runs in CI. Not parallel, the first group rewrites the
-# tree the second one compiles. Through `make` and not `task`, the Makefile
-# falls back to `go run` on a fresh clone.
+# Same stuff as CI. Not parallel: first group rewrites the tree the second
+# one compiles. Through make, not task: the Makefile falls back to `go run`
+# on a fresh clone.
 pre-push:
   piped: true
 
   jobs:
-    # sequential: mockgen writes files wire reads, and swag parses both
+    # sequential: mockgen writes files wire reads, swag parses both
     - name: generated
       group:
         piped: true
@@ -127,7 +126,7 @@ pre-push:
                 exit 1
               }
 
-    # safe in parallel, nothing here writes a source file
+    # fine in parallel, nothing here writes a source file
     - name: verify
       group:
         parallel: true

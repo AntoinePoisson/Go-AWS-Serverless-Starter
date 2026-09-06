@@ -1,4 +1,4 @@
-// Package items exposes the item resource in read-only mode.
+// Package items is the read-only item routes.
 package items
 
 import (
@@ -10,26 +10,26 @@ import (
 	"github.com/AntoinePoisson/go-aws-serverless-starter/internal/item"
 )
 
-// WireSet provides the handler.
+// WireSet is the handler.
 var WireSet = wire.NewSet(New)
 
-// Handler serves the read-only item routes.
+// Handler is the public item reads.
 type Handler struct {
 	items item.ServiceAPI
 }
 
-// New returns a Handler over the item service.
+// New wraps the item service.
 func New(items item.ServiceAPI) *Handler {
 	return &Handler{items: items}
 }
 
-// AddRoutes registers the read-only routes. They sit under /public so they do
-// not collide with the api function behind the same API Gateway.
+// AddRoutes registers the public reads. Under /public so they dont collide
+// with the api function on the same gateway.
 func (h *Handler) AddRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /public/items/{id}", httpx.Handle(h.get))
 }
 
-// get reads one item, no key needed.
+// get reads one item, no key.
 //
 //	@Id				getPublicItem
 //	@Summary		Read an item, unauthenticated

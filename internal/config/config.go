@@ -1,4 +1,4 @@
-// Package config loads the runtime settings from the process environment.
+// Package config loads runtime settings from the environment.
 package config
 
 import (
@@ -10,7 +10,7 @@ import (
 	"github.com/caarlos0/env/v11"
 )
 
-// Config holds the settings shared by every function.
+// Config is the settings every function reads.
 type Config struct {
 	Stage            string `env:"STAGE" envDefault:"local"`
 	LogLevel         string `env:"LOG_LEVEL" envDefault:"info"`
@@ -21,7 +21,7 @@ type Config struct {
 	Version          string `env:"VERSION" envDefault:"dev"`
 }
 
-// Load reads the configuration from the environment.
+// Load reads the environment.
 func Load() (*Config, error) {
 	var c Config
 	if err := env.Parse(&c); err != nil {
@@ -30,9 +30,9 @@ func Load() (*Config, error) {
 	return &c, nil
 }
 
-// SetupLogging installs a JSON slog handler at the configured level. Each
-// decorator wraps the handler built so far, which is how the request id gets
-// into every record without this package knowing about HTTP.
+// SetupLogging installs a JSON slog handler. Decorators wrap whatever we
+// just built, so the request id can land on every record without this
+// package knowing about HTTP.
 func (c *Config) SetupLogging(decorators ...func(slog.Handler) slog.Handler) {
 	var handler slog.Handler = slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{
 		Level: c.slogLevel(),

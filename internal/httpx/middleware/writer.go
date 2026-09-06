@@ -2,17 +2,16 @@ package middleware
 
 import "net/http"
 
-// responseWriter records the status a handler sent, and whether it started
-// writing at all.
+// responseWriter remembers the status and whether anything was written.
 type responseWriter struct {
 	http.ResponseWriter
 	status  int
 	written bool
 }
 
-// wrapResponseWriter reuses the wrapper an outer middleware already installed.
-// Logger and Recover both need one and are always chained together, so without
-// this every request carries two of them, the inner one shadowing the outer.
+// wrapResponseWriter reuses the wrapper an outer middleware already put on.
+// Logger and Recover both need one and always sit together, so without this
+// we'd stack two and the inner one would hide the outer.
 func wrapResponseWriter(w http.ResponseWriter) *responseWriter {
 	if wrapped, ok := w.(*responseWriter); ok {
 		return wrapped
@@ -33,6 +32,6 @@ func (w *responseWriter) Write(b []byte) (int, error) {
 	return w.ResponseWriter.Write(b)
 }
 
-// Unwrap is what http.ResponseController follows. Without it, flushing and
-// hijacking report "feature not supported" behind any middleware.
+// Unwrap is what ResponseController walks. Without it, flush/hijack say
+// "feature not supported" behind any middleware.
 func (w *responseWriter) Unwrap() http.ResponseWriter { return w.ResponseWriter }

@@ -11,11 +11,9 @@ import (
 	"github.com/google/uuid"
 )
 
-// Every bound is in runes and not in bytes, accents shouldnt halve the limit.
-// Together they keep the worst case item under 100 KiB, well inside the 400 KiB
-// a DynamoDB item is allowed: without them a payload the body limit accepts
-// reaches the table, gets rejected there and reads as a server error when it is
-// the caller who sent too much.
+// Limits are in runes, not bytes, so accents shouldnt eat half the budget.
+// Worst case stays under 100 KiB, well inside DynamoDB's 400 KiB. Without this
+// a body the HTTP limit accepts gets rejected by the table and looks like a 500.
 const (
 	maxNameLength          = 200
 	maxTags                = 20
@@ -29,33 +27,32 @@ const (
 )
 
 var (
-	// ErrNotFound is returned when an item does not exist.
+	// ErrNotFound means the item is gone, or never existed.
 	ErrNotFound = errors.New("item not found")
-	// ErrInvalidInput is returned when a payload fails validation.
+	// ErrInvalidInput is a bad payload, not a server problem.
 	ErrInvalidInput = errors.New("invalid input")
 )
 
 var _ ServiceAPI = (*Service)(nil)
 
-// CreateInput is the payload accepted by Service.Create.
+// CreateInput is what Create accepts.
 type CreateInput struct {
-	// Name is required, trimmed before storage and limited to 200 characters.
+	// Name is required, trimmed, 200 chars max.
 	Name string `json:"name" validate:"required,max=200" example:"first item"`
-	// Tags accepts at most 20 values of at most 50 characters each.
+	// Tags, 20 max, 50 chars each.
 	Tags []string `json:"tags" validate:"max=20" maxLength:"50" example:"demo,starter"`
-	// Metadata accepts at most 20 entries; keys are limited to 100 characters
-	// and values to 1,000 characters.
+	// Metadata, 20 entries max. Keys 100 chars, values 1000.
 	Metadata map[string]string `json:"metadata" example:"owner:platform"`
 }
 
-// Service implements the item use cases over a Repository.
+// Service is the item use cases on top of a Repository.
 type Service struct {
 	repo  Repository
 	now   func() time.Time
 	newID func() string
 }
 
-// NewService returns a Service backed by repo.
+// NewService wraps repo.
 func NewService(repo Repository) *Service {
 	return &Service{
 		repo:  repo,
@@ -64,7 +61,7 @@ func NewService(repo Repository) *Service {
 	}
 }
 
-// Create validates the input and stores a new item.
+// Create checks the payload then stores it.
 func (s *Service) Create(ctx context.Context, input CreateInput) (*Item, error) {
 	name := strings.TrimSpace(input.Name)
 	if err := validate(name, input); err != nil {
@@ -84,8 +81,7 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (*Item, error) 
 	return item, nil
 }
 
-// validate reports the first thing wrong with a creation payload, if anything.
-// name comes trimmed, the caller is the one that stores it.
+// validate stops at the first problem. name is already trimmed.
 func validate(name string, input CreateInput) error {
 	switch {
 	case name == "":
@@ -118,7 +114,7 @@ func validate(name string, input CreateInput) error {
 	return nil
 }
 
-// Get returns the item with the given id.
+// Get looks up one item.
 func (s *Service) Get(ctx context.Context, id string) (*Item, error) {
 	if strings.TrimSpace(id) == "" {
 		return nil, fmt.Errorf("%w: id is required", ErrInvalidInput)
@@ -126,7 +122,7 @@ func (s *Service) Get(ctx context.Context, id string) (*Item, error) {
 	return s.repo.Get(ctx, id)
 }
 
-// Delete removes the item with the given id.
+// Delete removes one item.
 func (s *Service) Delete(ctx context.Context, id string) error {
 	if strings.TrimSpace(id) == "" {
 		return fmt.Errorf("%w: id is required", ErrInvalidInput)
@@ -134,7 +130,7 @@ func (s *Service) Delete(ctx context.Context, id string) error {
 	return s.repo.Delete(ctx, id)
 }
 
-// List returns up to limit items. Anything outside [1, 100] falls back to 25.
+// List returns up to limit items. Outside [1, 100] we fall back to 25.
 func (s *Service) List(ctx context.Context, limit int32) ([]Item, error) {
 	if limit <= 0 || limit > maxLimit {
 		limit = defaultLimit

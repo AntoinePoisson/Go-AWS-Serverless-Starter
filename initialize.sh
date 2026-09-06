@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
 #
-# Turns the template into your own project.
+# Turns the template into your project.
 #
-# The identity of this repo is two strings, the Go module path and the service
-# name. Stack name, table name, SSM path and every import derive from them. We
-# rewrite both across the tracked files, then set the environment up.
+# Identity is two strings: Go module path and service name. Stack, table,
+# SSM path, imports all come from those. We rewrite them, then set up the env.
 #
 # Usage: ./initialize.sh [--module PATH] [--service NAME]
 #        make init
@@ -92,14 +91,14 @@ while [ $# -gt 0 ]; do
 	esac
 done
 
-# read from the files and not hardcoded, so this stays correct once it has run
+# read from the files, not hardcoded, so a second run still works
 current_module=$(awk '/^module /{print $2; exit}' go.mod)
 current_service=$(awk -F'[ \t]*:[ \t]*' '/^service:/{print $2; exit}' serverless.yml)
 
 [ -n "$current_module" ] || die "no module directive in go.mod"
 [ -n "$current_service" ] || die "no service key in serverless.yml"
 
-# GNU sed wants -i, BSD sed wants -i ''
+# GNU sed wants -i, BSD wants -i ''
 if sed --version >/dev/null 2>&1; then
 	sed_inplace() { sed -i "$@"; }
 else
@@ -109,7 +108,7 @@ fi
 sed_pattern() { printf '%s' "$1" | sed -e 's/[]\/$*.^|[]/\\&/g'; }
 sed_replacement() { printf '%s' "$1" | sed -e 's/[\/&|]/\\&/g'; }
 
-# every tracked file, plus .env which is ignored but holds the table name
+# every tracked file, plus .env (ignored, but it holds the table name)
 replace_everywhere() {
 	local from=$1 to=$2 expr file
 	expr="s|$(sed_pattern "$from")|$(sed_replacement "$to")|g"
@@ -124,9 +123,8 @@ replace_everywhere() {
 	done
 }
 
-# The OpenAPI title is prose, so no identifier substitution ever reaches it.
-# Derive it from the service name instead: orders-api -> "Orders API",
-# orders -> "Orders API".
+# Title is prose, so the identifier replace never hits it. Derive it from
+# the service name: orders-api -> "Orders API", orders -> "Orders API".
 api_title() {
 	printf '%s' "$1" | awk -F- '{
 		title = ""
@@ -143,8 +141,8 @@ api_title() {
 	}'
 }
 
-# Only the value is rewritten, the tabs that follow @title stay: the swaggo
-# formatter aligns on the annotation names and not on what they hold.
+# Only the value. Leave the tabs after @title, swaggo aligns on the
+# annotation names not the content.
 retitle_api() {
 	local title=$1
 	[ -f docs/openapi.go ] || return 0
@@ -177,8 +175,8 @@ if [ "$DO_RENAME" = true ]; then
 		fi
 	fi
 
-	# what CloudFormation, Lambda and npm all accept. anything else blows up at
-	# deploy time
+	# what CloudFormation, Lambda and npm all accept. anything else blows
+	# up at deploy time
 	case "$SERVICE" in
 	"" | [!a-z]* | *[!a-z0-9-]*)
 		die "service name must be lowercase letters, digits and dashes, starting with a letter: '$SERVICE'"
@@ -194,7 +192,7 @@ if [ "$DO_RENAME" = true ]; then
 		info "service $current_service -> $SERVICE"
 		printf '\n'
 
-		# the module path contains the service name, so it goes first
+		# module path contains the service name, so it goes first
 		[ "$MODULE" != "$current_module" ] && replace_everywhere "$current_module" "$MODULE"
 		if [ "$SERVICE" != "$current_service" ]; then
 			replace_everywhere "$current_service" "$SERVICE"
@@ -203,8 +201,8 @@ if [ "$DO_RENAME" = true ]; then
 	fi
 fi
 
-# Without this the manifests keep whatever version the template reached, and
-# the first Release Please run writes a changelog for a project nobody wrote.
+# Otherwise the manifests keep the template's version and the first
+# Release Please run writes a changelog for a project nobody wrote.
 reset_releases() {
 	step "Resetting the version history"
 
@@ -234,9 +232,8 @@ reset_releases() {
 
 if [ "$DO_RENAME" = true ] && [ -f .release-please-config.json ]; then
 	if [ "$DO_RESET_RELEASES" = ask ]; then
-		# Supplying --module is the non-interactive form advertised in the README:
-		# the service defaults to its last segment and a fresh project starts at
-		# 0.0.0. The explicit --keep-releases flag still wins when required.
+		# --module is the non-interactive form. service defaults to the last
+		# segment, version starts at 0.0.0. --keep-releases still wins.
 		if [ "$MODULE_FROM_ARG" = true ] || ! [ -t 0 ]; then
 			DO_RESET_RELEASES=true
 		else
@@ -259,7 +256,7 @@ if [ "$DO_SETUP" = true ]; then
 	step "Resolving the Go dependencies"
 	go mod tidy
 
-	# the `prepare` script installs the hooks as part of this, hence the order
+	# `prepare` installs the hooks as part of this, hence the order
 	step "Installing the Node tooling"
 	npm install --silent
 	info "serverless, lefthook, commitlint, redocly"
@@ -275,19 +272,17 @@ if [ "$DO_SETUP" = true ]; then
 	step "Installing the end-to-end test dependencies"
 	npm install --silent --prefix e2e
 
-	# The rename touched the title and the external documentation link in
-	# docs/openapi.go, so the committed spec no longer matches the annotations
-	# and the first commit would fail docs-check. Through `make`, which owns the
-	# swag invocation, and which builds `task` on the way so the first real
-	# target does not.
+	# Rename touched the title and the docs link in openapi.go, so the
+	# committed spec is stale and docs-check would fail on the first commit.
+	# Through make, which owns the swag call and builds task on the way.
 	if [ "$DO_RENAME" = true ] && [ -f docs/openapi.go ]; then
 		step "Regenerating the OpenAPI specification"
 		make docs >/dev/null
 		info "docs/openapi.yaml"
 	fi
 
-	# otherwise the first pre-commit builds the ~200 modules golangci-lint
-	# pulls in and looks like a hang
+	# otherwise the first pre-commit builds ~200 modules for golangci-lint
+	# and looks like a hang
 	step "Warming the tool caches"
 	go tool golangci-lint --version >/dev/null 2>&1 || warn "golangci-lint could not be built"
 	go build ./... >/dev/null

@@ -1,8 +1,8 @@
 version: "3"
 
 vars:
-  # The first directory has to hold the -g file, swag resolves it relative to
-  # that one and not to the working directory.
+  # First dir has to hold the -g file. swag resolves it relative to that
+  # one, not the working directory.
   SWAG_DIRS: ./docs,./lambda/api/internal/handler/items,./lambda/public/internal/handler/health,./lambda/public/internal/handler/items,./internal/item,./internal/httpx
 
 tasks:
@@ -16,30 +16,29 @@ tasks:
     generates:
       - docs/openapi.yaml
     cmds:
-      # --parseInternal is mandatory, every type we return lives under internal/
-      # and without it swag emits no schema and no error either. Dont add
-      # --parseDependency, it pulls in the AWS SDK for nothing.
+      # --parseInternal is mandatory, every type we return lives under
+      # internal/. Without it swag emits no schema and no error either.
+      # Dont add --parseDependency, it pulls in the AWS SDK for nothing.
       - go tool swag init --v3.1 -ot yaml --parseInternal -g openapi.go -d {{.SWAG_DIRS}} -o docs
-      # swag writes swagger.yaml whatever the spec version
+      # swag writes swagger.yaml no matter the spec version
       - mv docs/swagger.yaml docs/openapi.yaml
 
   lint:
     desc: Validate docs/openapi.yaml with Redocly
     cmds:
-      # --no-install: bare npx silently downloads the latest release instead of
-      # failing when node_modules is missing. --config because the Redocly
-      # configuration sits next to the spec rather than at the repository root.
+      # --no-install: bare npx silently downloads the latest release instead
+      # of failing when node_modules is missing. --config because redocly.yaml
+      # sits next to the spec, not at the repo root.
       - npx --no-install redocly lint docs/openapi.yaml --config docs/redocly.yaml
 
   html:
     desc: Render docs/api.html from the specification
     deps: [openapi]
     cmds:
-      # --theme options are applied during the server-side render, so they
-      # land in the first paint instead of after hydration. No web font: the
-      # Google Fonts stylesheet blocked rendering for ~1s and pulled two woff2
-      # files onto the critical path for what the system stack already covers.
-      # The colours are the ones the defaults get wrong on contrast, see
+      # --theme is applied during SSR so it lands in the first paint, not
+      # after hydration. No web font: Google Fonts blocked render for ~1s
+      # and pulled two woff2 for what the system stack already covers.
+      # Colours are the ones the defaults get wrong on contrast. See
       # docs/template.hbs for the one case that has to stay CSS.
       - >-
         npx --no-install redocly build-docs docs/openapi.yaml
@@ -53,8 +52,8 @@ tasks:
         --theme.openapi.theme.typography.links.textDecoration=underline
         --theme.openapi.theme.colors.responses.error.tabTextColor='#e8615c'
         -o docs/api.html
-      # Redocly emits the bundle as a render-blocking script even though the
-      # page is already server-rendered. See the file for what it rewrites.
+      # Redocly still emits a blocking script even though the page is
+      # already rendered. See the file for what it rewrites.
       - node docs/optimize-html.mjs docs/api.html
 
   check:

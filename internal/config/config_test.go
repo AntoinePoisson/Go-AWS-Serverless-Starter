@@ -74,8 +74,7 @@ func TestSetupLoggingAppliesTheConfiguredLevel(t *testing.T) {
 	}
 }
 
-// The decorators are how the request id reaches every record, see
-// middleware.LogRequestID.
+// Decorators are how the request id reaches every record, see LogRequestID.
 func TestSetupLoggingAppliesTheDecoratorsOutwards(t *testing.T) {
 	restoreDefaultLogger(t)
 

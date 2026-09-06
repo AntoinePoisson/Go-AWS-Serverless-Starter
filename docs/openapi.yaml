@@ -33,20 +33,17 @@ components:
         metadata:
           additionalProperties:
             type: string
-          description: |-
-            Metadata accepts at most 20 entries; keys are limited to 100 characters
-            and values to 1,000 characters.
+          description: Metadata, 20 entries max. Keys 100 chars, values 1000.
           example:
             owner: platform
           type: object
         name:
-          description: Name is required, trimmed before storage and limited to 200
-            characters.
+          description: Name is required, trimmed, 200 chars max.
           example: first item
           maxLength: 200
           type: string
         tags:
-          description: Tags accepts at most 20 values of at most 50 characters each.
+          description: Tags, 20 max, 50 chars each.
           example:
           - demo
           - starter

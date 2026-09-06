@@ -49,9 +49,8 @@ func TestServiceCreateRejectsInvalidInput(t *testing.T) {
 		{name: "name too long", input: item.CreateInput{Name: strings.Repeat("a", 201)}},
 		{name: "name too long in runes", input: item.CreateInput{Name: strings.Repeat("é", 201)}},
 		{name: "too many tags", input: item.CreateInput{Name: "demo", Tags: make([]string, 21)}},
-		// nothing below this line reaches the repository either: an item that
-		// big is refused by DynamoDB, and a rejected payload is the caller's
-		// mistake, not a server error.
+		// these would also get refused by DynamoDB. better we say 400 here
+		// than let it come back as a 500.
 		{
 			name:  "tag too long",
 			input: item.CreateInput{Name: "demo", Tags: []string{strings.Repeat("a", 51)}},
@@ -96,7 +95,7 @@ func manyEntries(n int) map[string]string {
 	return entries
 }
 
-// The bounds are what fits, so what fits has to go through.
+// If we say it fits, it has to go through.
 func TestServiceCreateAcceptsThePayloadAtEveryBound(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	repo := mock_item.NewMockRepository(ctrl)

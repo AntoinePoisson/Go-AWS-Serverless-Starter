@@ -7,14 +7,14 @@ import (
 	"net/http"
 )
 
-// Error is an error carrying the status code to return to the client.
+// Error is an error with the status we send back.
 type Error struct {
 	Status  int    `json:"-"`
 	Code    string `json:"code" validate:"required" example:"not_found"`
 	Message string `json:"message" validate:"required" example:"item not found"`
 }
 
-// Errorf builds an Error with a formatted message.
+// Errorf builds an Error.
 func Errorf(status int, code, format string, args ...any) *Error {
 	return &Error{
 		Status:  status,
@@ -27,10 +27,10 @@ func (e *Error) Error() string {
 	return fmt.Sprintf("%s: %s", e.Code, e.Message)
 }
 
-// HandlerFunc is an http.HandlerFunc allowed to return an error.
+// HandlerFunc is an http.HandlerFunc that can return an error.
 type HandlerFunc func(http.ResponseWriter, *http.Request) error
 
-// Handle adapts a HandlerFunc to http.HandlerFunc and renders its errors.
+// Handle adapts a HandlerFunc and renders whatever it returns.
 func Handle(h HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if err := h(w, r); err != nil {
@@ -39,8 +39,8 @@ func Handle(h HandlerFunc) http.HandlerFunc {
 	}
 }
 
-// WriteError renders err as JSON. Anything that is not an *Error gets logged
-// and reported as an internal error.
+// WriteError writes err as JSON. Anything that isn't an *Error is logged and
+// comes back as a 500.
 func WriteError(w http.ResponseWriter, r *http.Request, err error) {
 	var httpErr *Error
 	if !errors.As(err, &httpErr) {

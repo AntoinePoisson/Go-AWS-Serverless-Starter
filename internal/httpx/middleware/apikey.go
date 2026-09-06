@@ -7,12 +7,12 @@ import (
 	"github.com/AntoinePoisson/go-aws-serverless-starter/internal/httpx"
 )
 
-// APIKeyHeader carries the shared secret expected by APIKey.
+// APIKeyHeader is the header APIKey reads.
 //
-//nolint:gosec // G101 matches the header name, not a credential.
+//nolint:gosec // G101 hits the header name, not a real secret.
 const APIKeyHeader = "X-Api-Key"
 
-// APIKey rejects requests whose API key header does not match key.
+// APIKey rejects a request when the key is wrong.
 func APIKey(key string) httpx.Middleware {
 	expected := []byte(key)
 

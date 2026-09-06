@@ -18,8 +18,7 @@ import (
 
 const readHeaderTimeout = 10 * time.Second
 
-// Serve runs h as a Lambda function on Lambda, and as a plain HTTP server
-// anywhere else.
+// Serve runs h as a Lambda when we are on Lambda, as a plain HTTP server otherwise.
 func Serve(h http.Handler, addr string) error {
 	if os.Getenv("AWS_LAMBDA_FUNCTION_NAME") == "" {
 		slog.Info("listening", "addr", addr)
@@ -35,7 +34,7 @@ func Serve(h http.Handler, addr string) error {
 	return nil
 }
 
-// proxy adapts h to the API Gateway HTTP API payload format 2.0.
+// proxy adapts h to the HTTP API payload (format 2.0).
 func proxy(h http.Handler) func(context.Context, events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
 	return func(ctx context.Context, event events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
 		req, err := newRequest(ctx, event)
@@ -91,7 +90,7 @@ func newRequest(ctx context.Context, event events.APIGatewayV2HTTPRequest) (*htt
 	return req, nil
 }
 
-// recorder captures what a handler writes, to turn it into a Lambda response.
+// recorder captures a handler response so we can turn it into a Lambda one.
 type recorder struct {
 	header http.Header
 	body   bytes.Buffer
@@ -100,8 +99,8 @@ type recorder struct {
 
 func (r *recorder) Header() http.Header { return r.header }
 
-// Write mirrors net/http and sniffs the content type when the handler set
-// none. That also decides how the body is encoded.
+// Write mirrors net/http: sniff Content-Type if the handler didn't set one.
+// That also decides how the body is encoded.
 func (r *recorder) Write(b []byte) (int, error) {
 	if r.header.Get("Content-Type") == "" {
 		r.header.Set("Content-Type", http.DetectContentType(b))
@@ -147,8 +146,7 @@ func (r *recorder) response() events.APIGatewayV2HTTPResponse {
 	}
 }
 
-// isTextual reports whether a content type survives as a plain string.
-// Anything else has to reach API Gateway base64 encoded.
+// isTextual is whatever we can send as a plain string. The rest goes base64.
 func isTextual(contentType string) bool {
 	mediaType, _, err := mime.ParseMediaType(contentType)
 	if err != nil {

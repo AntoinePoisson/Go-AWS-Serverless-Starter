@@ -1,17 +1,15 @@
-# Alarms on the HTTP API rather than on the functions, so that the failures no
-# handler ever sees (integration timeout, throttled or crashed Lambda, bad
-# response payload) trip it too.
+# Alarms on the HTTP API, not the functions, so the failures no handler
+# ever sees (timeout, throttle, crash, bad payload) trip it too.
 Resources:
-  # No subscription here on purpose, an address belongs to whoever runs the
-  # stage. Subscribe to the ARN once and later alarms publish to the same topic.
+  # TODO: subscribe whoever owns the stage. An address doesn't belong in the template.
   AlarmTopic:
     Type: AWS::SNS::Topic
     Properties:
       TopicName: ${self:service}-${self:provider.stage}-alarms
       DisplayName: ${self:service} ${self:provider.stage}
 
-  # `5xx` is the HTTP API metric, a REST API publishes `5XXError` instead.
-  # Getting it wrong deploys fine and sits in INSUFFICIENT_DATA forever.
+  # `5xx` is the HTTP API metric. A REST API publishes `5XXError` instead.
+  # Get it wrong and it deploys fine, then sits in INSUFFICIENT_DATA forever.
   ApiServerErrorsAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:

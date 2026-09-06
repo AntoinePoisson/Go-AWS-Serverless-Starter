@@ -10,7 +10,7 @@ import (
 
 const maxBodySize = 1 << 20
 
-// WriteJSON writes v as a JSON body. A nil value writes the status only.
+// WriteJSON writes v as JSON. nil writes the status and nothing else.
 func WriteJSON(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
@@ -22,14 +22,13 @@ func WriteJSON(w http.ResponseWriter, status int, v any) {
 	}
 }
 
-// DecodeJSON reads the request body into v. Unknown fields are rejected and a
-// body over 1 MiB is a 413, not a parse error.
+// DecodeJSON reads the body into v. Unknown fields are rejected. Over 1 MiB
+// is a 413, not a parse error.
 func DecodeJSON(r *http.Request, v any) error {
 	defer r.Body.Close()
 
-	// Not io.LimitReader: truncation reaches the decoder as "unexpected EOF" and
-	// reports a perfectly good body as malformed. The nil writer only costs us
-	// the early connection close.
+	// LimitReader would truncate and the decoder would say "unexpected EOF"
+	// on a perfectly fine body. The nil writer just skips the early close.
 	dec := json.NewDecoder(http.MaxBytesReader(nil, r.Body, maxBodySize))
 	dec.DisallowUnknownFields()
 

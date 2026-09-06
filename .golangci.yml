@@ -4,12 +4,11 @@ version: "2"
 linters:
   default: standard # errcheck, govet, ineffassign, staticcheck, unused
 
-  # godox is missing on purpose, CI and the hooks turn it on for the protected
-  # branches only.
+  # godox is off on purpose. CI and the hooks turn it on for protected branches.
   enable:
     - bodyclose
     - copyloopvar
-    - errorlint # internal/item/errors.go relies on errors.Is/As
+    - errorlint # HTTPError relies on errors.Is/As
     - gosec
     - misspell
     - nilerr
@@ -27,11 +26,11 @@ linters:
 
     gosec:
       excludes:
-        - G404 # math/rand is not used for anything security related here
+        - G404 # math/rand is not used for anything security related
 
     revive:
-      # exported keeps its defaults, checkPrivateReceivers would ask for a doc
-      # comment on every ResponseWriter method of an unexported type
+      # exported keeps its defaults. checkPrivateReceivers would ask for a
+      # doc comment on every ResponseWriter method of an unexported type.
       rules:
         - name: exported
         - name: context-as-argument
@@ -46,19 +45,19 @@ linters:
 
     sloglint:
       no-mixed-args: true
-      kv-only: true # slog.Info("msg", "key", value), no attribute helpers
-      static-msg: true # the message is the event, values go in keys
-      key-naming-case: snake # easier to query in CloudWatch Logs Insights
+      kv-only: true # slog.Info("msg", "key", value), no Attr helpers
+      static-msg: true # message is the event, values go in keys
+      key-naming-case: snake # easier to query in Logs Insights
 
     testifylint:
       disable:
-        # the recover test asserts on a truncated body, JSONEq cannot parse it
+        # recover test asserts on a truncated body, JSONEq can't parse it
         - encoded-compare
 
     staticcheck:
       checks:
         - all
-        - -ST1000 # a package comment everywhere is a library convention
+        - -ST1000 # a package comment on every package is a library thing
 
   exclusions:
     generated: lax

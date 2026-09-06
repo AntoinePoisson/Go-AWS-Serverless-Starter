@@ -2,7 +2,7 @@ package item
 
 import "context"
 
-// Repository persists items.
+// Repository is the persistence side.
 type Repository interface {
 	Put(ctx context.Context, in *Item) error
 	Get(ctx context.Context, id string) (*Item, error)
@@ -10,7 +10,7 @@ type Repository interface {
 	List(ctx context.Context, limit int32) ([]Item, error)
 }
 
-// ServiceAPI exposes the item use cases to the handlers.
+// ServiceAPI is what the handlers call.
 type ServiceAPI interface {
 	Create(ctx context.Context, input CreateInput) (*Item, error)
 	Get(ctx context.Context, id string) (*Item, error)

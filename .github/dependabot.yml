@@ -1,4 +1,4 @@
-# Prefixes have to match commitlint.config.cjs or the commit hook rejects them.
+# Prefixes have to match commitlint.config.cjs or the hook rejects them.
 version: 2
 
 updates:

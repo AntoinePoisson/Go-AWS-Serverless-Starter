@@ -1,6 +1,6 @@
 import { defineConfig } from "@playwright/test";
 
-// Both functions are plain HTTP servers, so Playwright can run them itself.
+// Both functions are plain HTTP servers, Playwright can just start them.
 const hasExternalAPI = Boolean(process.env.E2E_API_URL);
 const hasExternalPublic = Boolean(process.env.E2E_PUBLIC_URL);
 if (hasExternalAPI !== hasExternalPublic) {
@@ -8,8 +8,8 @@ if (hasExternalAPI !== hasExternalPublic) {
 }
 const managed = !hasExternalAPI;
 
-// `port` and not `url`: every route of the api function answers 401 without a
-// key, and Playwright waits for a response under 400.
+// `port`, not `url`: every api route answers 401 without a key, and
+// Playwright waits for a status under 400.
 const functions = [
   { name: "api", port: 8080 },
   { name: "public", port: 8081 },
@@ -27,11 +27,11 @@ export default defineConfig({
   webServer: managed
     ? functions.map(({ name, port }) => ({
         command: `go run ./lambda/${name}`,
-        // the module root, this file sits in e2e/
+        // module root. this file lives in e2e/
         cwd: "..",
         env: { LISTEN_ADDR: `:${port}` },
         port,
-        // `go run` compiles first, which is the slow part on a cold cache
+        // go run compiles first, that's the slow bit on a cold cache
         timeout: 180_000,
         reuseExistingServer: !process.env.CI,
         stdout: "pipe" as const,

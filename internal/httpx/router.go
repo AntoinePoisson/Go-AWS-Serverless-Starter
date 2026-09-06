@@ -1,10 +1,9 @@
-// Package httpx holds the HTTP plumbing shared by the functions: routing, JSON
-// responses, error rendering and the Lambda entry point.
+// Package httpx is the shared HTTP bits: router, JSON, errors, Lambda entry.
 package httpx
 
 import "net/http"
 
-// Handler registers its own routes on a mux.
+// Handler registers its own routes.
 type Handler interface {
 	AddRoutes(mux *http.ServeMux)
 }
@@ -12,8 +11,7 @@ type Handler interface {
 // Middleware wraps an http.Handler.
 type Middleware func(http.Handler) http.Handler
 
-// NewRouter builds a mux from the given handlers and renders its own routing
-// errors with the same JSON envelope as application errors.
+// NewRouter wires handlers onto a mux and turns 404/405 into our JSON errors.
 func NewRouter(handlers ...Handler) http.Handler {
 	mux := http.NewServeMux()
 	for _, h := range handlers {
@@ -27,13 +25,12 @@ type router struct{ mux *http.ServeMux }
 func (rt *router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h, pattern := rt.mux.Handler(r)
 	if pattern != "" {
-		// Serve through the mux rather than h directly so path values are set.
+		// Through the mux so {id} and friends get set.
 		rt.mux.ServeHTTP(w, r)
 		return
 	}
 
-	// The empty pattern is the native 404 or 405 handler. Let it compute the
-	// status and headers (notably Allow), but discard its text body.
+	// Empty pattern = mux 404/405. Keep status + Allow, drop the text body.
 	probe := &routingErrorWriter{header: w.Header()}
 	h.ServeHTTP(probe, r)
 
@@ -61,7 +58,7 @@ func (w *routingErrorWriter) Write(body []byte) (int, error) {
 	return len(body), nil
 }
 
-// Chain wraps h with the given middlewares, first one outermost.
+// Chain wraps h, first middleware outermost.
 func Chain(h http.Handler, middlewares ...Middleware) http.Handler {
 	for i := len(middlewares) - 1; i >= 0; i-- {
 		h = middlewares[i](h)

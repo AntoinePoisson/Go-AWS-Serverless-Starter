@@ -1,4 +1,4 @@
-// Package items exposes the CRUD routes of the item resource.
+// Package items is the CRUD routes for the item resource.
 package items
 
 import (
@@ -11,15 +11,15 @@ import (
 	"github.com/AntoinePoisson/go-aws-serverless-starter/internal/item"
 )
 
-// WireSet provides the handler.
+// WireSet is the handler.
 var WireSet = wire.NewSet(New)
 
-// Handler serves the item resource.
+// Handler is the item resource.
 type Handler struct {
 	items item.ServiceAPI
 }
 
-// New returns a Handler over the item service.
+// New wraps the item service.
 func New(items item.ServiceAPI) *Handler {
 	return &Handler{items: items}
 }
@@ -32,14 +32,13 @@ func (h *Handler) AddRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("DELETE /items/{id}", httpx.Handle(h.delete))
 }
 
-// ListResponse is the body of GET /items. Exported so the generated schema is
-// named after it.
+// ListResponse is GET /items. Exported so the schema keeps this name.
 type ListResponse struct {
 	Items []item.Item `json:"items" validate:"required"`
 	Count int         `json:"count" validate:"required"`
 }
 
-// create stores an item.
+// create stores one item.
 //
 //	@Id				createItem
 //	@Summary		Create an item
@@ -95,7 +94,7 @@ func (h *Handler) get(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-// delete removes an item.
+// delete removes one item.
 //
 //	@Id				deleteItem
 //	@Summary		Delete an item
@@ -118,7 +117,7 @@ func (h *Handler) delete(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-// list returns a page of items.
+// list returns a page.
 //
 //	@Id				listItems
 //	@Summary		List items
