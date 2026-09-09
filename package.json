@@ -9,10 +9,10 @@
     "prepare": "lefthook install"
   },
   "devDependencies": {
-    "@commitlint/config-conventional": "^21.2.0",
-    "@redocly/cli": "^2.44.1",
-    "commitlint": "^21.2.1",
-    "lefthook": "^2.1.10",
+    "@commitlint/config-conventional": "^21.2.2",
+    "@redocly/cli": "^2.51.2",
+    "commitlint": "^21.2.2",
+    "lefthook": "^2.1.12",
     "serverless": "^3.40.0",
     "serverless-iam-roles-per-function": "^3.2.0"
   },
