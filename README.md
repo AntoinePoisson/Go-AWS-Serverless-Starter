@@ -190,4 +190,4 @@ e2e/              Playwright tests
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+See [`LICENSE`](LICENSE) file.
